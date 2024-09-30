@@ -49,10 +49,11 @@ function isOverlapping(element, xPos, yPos) {
     return false;
 }
 
-// Make labels draggable
-function makeLabelDraggable(label) {
+// Make labels draggable and editable on double-click
+function makeLabelDraggableAndEditable(label) {
     let offsetX = 0, offsetY = 0, isDragging = false;
 
+    // Enable dragging
     label.addEventListener('mousedown', function(e) {
         isDragging = true;
         offsetX = e.clientX - label.offsetLeft;
@@ -90,9 +91,22 @@ function makeLabelDraggable(label) {
             }
         });
     });
+
+    // Make text editable on double-click
+    label.addEventListener('dblclick', function(e) {
+        e.stopPropagation(); // Prevent creating a new label when double-clicking on an existing one
+        label.contentEditable = true;
+        label.classList.add('editable');
+    });
+
+    // Save text on blur
+    label.addEventListener('blur', function() {
+        label.contentEditable = false; // Lock the label after editing
+        label.classList.remove('editable');
+    });
 }
 
-// Double-click to create new label
+// Double-click to create a new label
 document.addEventListener('dblclick', function(e) {
     // Create a new label
     const newLabel = document.createElement('div');
@@ -102,7 +116,7 @@ document.addEventListener('dblclick', function(e) {
     newLabel.style.left = `${e.clientX}px`;
     newLabel.style.top = `${e.clientY}px`;
 
-    // Add to the document and make it draggable
+    // Add to the document and make it draggable and editable
     document.body.appendChild(newLabel);
     labelPositions.push({
         element: newLabel,
@@ -111,24 +125,11 @@ document.addEventListener('dblclick', function(e) {
         width: newLabel.offsetWidth,
         height: newLabel.offsetHeight
     });
-    makeLabelDraggable(newLabel);
-
-    // Save the text on blur (when editing is done)
-    newLabel.addEventListener('blur', function() {
-        newLabel.contentEditable = false; // Lock the label after editing
-        newLabel.classList.remove('editable');
-    });
-
-    // Allow editing again on double-click
-    newLabel.addEventListener('dblclick', function(e) {
-        e.stopPropagation(); // Prevent creating a new label on this double-click
-        newLabel.contentEditable = true;
-        newLabel.classList.add('editable');
-    });
+    makeLabelDraggableAndEditable(newLabel);
 });
 
-// Apply draggable behavior to existing labels
-labels.forEach(label => makeLabelDraggable(label));
+// Apply draggable and editable behavior to existing labels
+labels.forEach(label => makeLabelDraggableAndEditable(label));
 
 // Initialize positions for existing labels
 setInitialPositions();
