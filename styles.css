@@ -31,3 +31,8 @@ body {
     padding: 5px;
 }
 
+.selected {
+    border-color: #e74c3c !important; /* Red border for selected labels */
+    background-color: #fef5f5; /* Light red background */
+}
+

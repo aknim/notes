@@ -1,8 +1,7 @@
 // Get all draggable labels
 let labels = document.querySelectorAll('.floating-label');
-
-// Keep track of positions to avoid overlap
-let labelPositions = [];
+let selectedLabels = [];  // To track multiple selected labels
+let labelPositions = [];  // To avoid overlap
 
 // Set initial positions for non-overlapping
 function setInitialPositions() {
@@ -55,12 +54,19 @@ function makeLabelDraggableAndEditable(label) {
 
     // Enable dragging
     label.addEventListener('mousedown', function(e) {
-        isDragging = true;
-        offsetX = e.clientX - label.offsetLeft;
-        offsetY = e.clientY - label.offsetTop;
+        if (!isDragging) {
+            handleSelection(e, label); // Handle selection on mouse down
+        }
+        
+        // Start dragging
+        if (!e.ctrlKey && !e.metaKey) { // Only drag if not using selection (Ctrl/Cmd)
+            isDragging = true;
+            offsetX = e.clientX - label.offsetLeft;
+            offsetY = e.clientY - label.offsetTop;
 
-        label.style.zIndex = '1000';
-        label.style.cursor = 'grabbing';
+            label.style.zIndex = '1000';
+            label.style.cursor = 'grabbing';
+        }
     });
 
     document.addEventListener('mousemove', function(e) {
@@ -94,7 +100,7 @@ function makeLabelDraggableAndEditable(label) {
 
     // Make text editable on double-click
     label.addEventListener('dblclick', function(e) {
-        e.stopPropagation(); // Prevent creating a new label when double-clicking on an existing one
+        e.stopPropagation(); // Prevent creating a new label on this double-click
         label.contentEditable = true;
         label.classList.add('editable');
     });
@@ -104,6 +110,25 @@ function makeLabelDraggableAndEditable(label) {
         label.contentEditable = false; // Lock the label after editing
         label.classList.remove('editable');
     });
+}
+
+// Function to handle label selection
+function handleSelection(e, label) {
+    if (e.ctrlKey || e.metaKey) { // Check if Ctrl (Windows) or Cmd (Mac) is held
+        // Toggle selection
+        if (selectedLabels.includes(label)) {
+            label.classList.remove('selected');
+            selectedLabels = selectedLabels.filter(item => item !== label);
+        } else {
+            label.classList.add('selected');
+            selectedLabels.push(label);
+        }
+    } else {
+        // Deselect all other labels if Ctrl/Cmd is not held
+        selectedLabels.forEach(l => l.classList.remove('selected'));
+        selectedLabels = [label];
+        label.classList.add('selected');
+    }
 }
 
 // Double-click to create a new label
