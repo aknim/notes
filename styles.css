@@ -12,7 +12,7 @@ body {
 .floating-label {
     padding: 10px 20px;
     font-size: 18px;
-    color: #3498db; /* Border and text color */
+    color: #3498db;
     background-color: white;
     border: 2px solid #3498db;
     border-radius: 20px;
