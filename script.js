@@ -1,31 +1,35 @@
-// Get the draggable label
-const label = document.getElementById('draggable-label');
+// Get all draggable labels
+const labels = document.querySelectorAll('.floating-label');
 
-// Variables to store the mouse position and label position
-let offsetX = 0, offsetY = 0, isDragging = false;
+labels.forEach(label => {
+    let offsetX = 0, offsetY = 0, isDragging = false;
 
-label.addEventListener('mousedown', function(e) {
-    isDragging = true;
-    offsetX = e.clientX - label.offsetLeft;
-    offsetY = e.clientY - label.offsetTop;
+    label.addEventListener('mousedown', function(e) {
+        isDragging = true;
+        offsetX = e.clientX - label.offsetLeft;
+        offsetY = e.clientY - label.offsetTop;
 
-    // Change cursor to dragging style
-    label.style.cursor = 'grabbing';
-});
+        // Bring label to the front while dragging
+        label.style.zIndex = '1000';
+        // Change cursor to dragging style
+        label.style.cursor = 'grabbing';
+    });
 
-document.addEventListener('mousemove', function(e) {
-    if (isDragging) {
-        const mouseX = e.clientX;
-        const mouseY = e.clientY;
+    document.addEventListener('mousemove', function(e) {
+        if (isDragging) {
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
 
-        // Move the label with the mouse
-        label.style.left = (mouseX - offsetX) + 'px';
-        label.style.top = (mouseY - offsetY) + 'px';
-    }
-});
+            // Move the label with the mouse
+            label.style.left = (mouseX - offsetX) + 'px';
+            label.style.top = (mouseY - offsetY) + 'px';
+        }
+    });
 
-document.addEventListener('mouseup', function() {
-    isDragging = false;
-    label.style.cursor = 'move';  // Change cursor back to move
+    document.addEventListener('mouseup', function() {
+        isDragging = false;
+        label.style.cursor = 'move';  // Change cursor back to move
+        label.style.zIndex = '1';     // Reset z-index after dragging
+    });
 });
 
