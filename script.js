@@ -1,7 +1,22 @@
 // Get all draggable labels
 let labels = document.querySelectorAll('.floating-label');
-let selectedLabels = [];  // To track multiple selected labels
-let labelPositions = [];  // To avoid overlap
+let selectedLabels = [];
+let labelPositions = [];
+
+// For line drawing
+let isShiftPressed = false;
+let firstLabel = null;
+let lineCanvas = document.getElementById('lineCanvas');
+let ctx = lineCanvas.getContext('2d');
+let lines = []; // Store drawn lines between labels
+
+// Resize the canvas to the window size
+function resizeCanvas() {
+    lineCanvas.width = window.innerWidth;
+    lineCanvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 // Set initial positions for non-overlapping
 function setInitialPositions() {
@@ -57,9 +72,9 @@ function makeLabelDraggableAndEditable(label) {
         if (!isDragging) {
             handleSelection(e, label); // Handle selection on mouse down
         }
-        
+
         // Start dragging
-        if (!e.ctrlKey && !e.metaKey) { // Only drag if not using selection (Ctrl/Cmd)
+        if (!e.ctrlKey && !e.metaKey && !isShiftPressed) { // Only drag if not using selection (Ctrl/Cmd/Shift)
             isDragging = true;
             offsetX = e.clientX - label.offsetLeft;
             offsetY = e.clientY - label.offsetTop;
@@ -80,6 +95,7 @@ function makeLabelDraggableAndEditable(label) {
             if (!isOverlapping(label, newLeft, newTop)) {
                 label.style.left = `${newLeft}px`;
                 label.style.top = `${newTop}px`;
+                updateLines(); // Update lines when label is dragged
             }
         }
     });
@@ -110,6 +126,18 @@ function makeLabelDraggableAndEditable(label) {
         label.contentEditable = false; // Lock the label after editing
         label.classList.remove('editable');
     });
+
+    // Handle Shift+Click for line drawing
+    label.addEventListener('click', function(e) {
+        if (isShiftPressed) {
+            if (!firstLabel) {
+                firstLabel = label; // Set the first label
+            } else {
+                drawLineBetweenLabels(firstLabel, label); // Draw a line between first and second labels
+                firstLabel = null; // Reset the first label
+            }
+        }
+    });
 }
 
 // Function to handle label selection
@@ -130,6 +158,73 @@ function handleSelection(e, label) {
         label.classList.add('selected');
     }
 }
+
+// Function to draw a line between two labels
+function drawLineBetweenLabels(label1, label2) {
+    const rect1 = label1.getBoundingClientRect();
+    const rect2 = label2.getBoundingClientRect();
+
+    const x1 = rect1.left + rect1.width / 2;
+    const y1 = rect1.top + rect1.height / 2;
+    const x2 = rect2.left + rect2.width / 2;
+    const y2 = rect2.top + rect2.height / 2;
+
+    // Store the line information for later updates
+    lines.push({
+        label1,
+        label2,
+        x1,
+        y1,
+        x2,
+        y2
+    });
+
+    updateLines();
+}
+
+// Function to update all drawn lines
+function updateLines() {
+    // Clear the canvas
+    ctx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
+
+    // Redraw each line
+    lines.forEach(line => {
+        const rect1 = line.label1.getBoundingClientRect();
+        const rect2 = line.label2.getBoundingClientRect();
+
+        const x1 = rect1.left + rect1.width / 2;
+        const y1 = rect1.top + rect1.height / 2;
+        const x2 = rect2.left + rect2.width / 2;
+        const y2 = rect2.top + rect2.height / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = '#e74c3c';  // Line color (red)
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Update the stored positions for the line
+        line.x1 = x1;
+        line.y1 = y1;
+        line.x2 = x2;
+        line.y2 = y2;
+    });
+}
+
+// Track if the Shift key is pressed
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Shift') {
+        isShiftPressed = true;
+    }
+});
+
+document.addEventListener('keyup', function(e) {
+    if (e.key === 'Shift') {
+        isShiftPressed = false;
+        firstLabel = null;  // Reset first label if shift is released
+    }
+});
 
 // Double-click to create a new label
 document.addEventListener('dblclick', function(e) {

@@ -7,6 +7,14 @@ body {
     justify-content: center;
     align-items: center;
     overflow: hidden;
+    position: relative;
+}
+
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0; /* Keep the canvas below the labels */
 }
 
 .floating-label {
@@ -20,6 +28,7 @@ body {
     cursor: move;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     transition: box-shadow 0.3s ease;
+    z-index: 1; /* Keep the labels above the canvas */
 }
 
 .floating-label:hover {
