@@ -1,0 +1,28 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.floating-label {
+    padding: 10px 20px;
+    font-size: 18px;
+    color: #3498db; /* Border and text color */
+    background-color: white;
+    border: 2px solid #3498db;
+    border-radius: 20px;
+    position: absolute;
+    cursor: move;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: box-shadow 0.3s ease;
+}
+
+.floating-label:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
