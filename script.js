@@ -254,3 +254,39 @@ labels.forEach(label => makeLabelDraggableAndEditable(label));
 // Initialize positions for existing labels
 setInitialPositions();
 
+// Save functionality: Esc + S to log label and line data to the console
+document.addEventListener('keydown', function(e) {
+    if (e.key === 's' && e.metaKey || e.key === 's' && e.ctrlKey) {
+        e.preventDefault();
+        saveState();
+    }
+});
+
+function saveState() {
+    const labelsData = labelPositions.map(labelPos => ({
+        text: labelPos.element.innerText.trim(),
+        left: labelPos.left,
+        top: labelPos.top
+    }));
+
+    const linesData = lines.map(line => ({
+        from: line.label1.innerText.trim(),
+        to: line.label2.innerText.trim(),
+        fromPosition: {
+            x: line.x1,
+            y: line.y1
+        },
+        toPosition: {
+            x: line.x2,
+            y: line.y2
+        }
+    }));
+
+    const state = {
+        labels: labelsData,
+        lines: linesData
+    };
+    
+    console.log(JSON.stringify(state, null, 2));
+    //console.log("Current state of labels and lines:", state);
+}
