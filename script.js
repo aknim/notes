@@ -253,30 +253,104 @@ labels.forEach(label => makeLabelDraggableAndEditable(label));
 
 // Initialize positions for existing labels
 setInitialPositions();
-
-// Save functionality: Esc + S to log label and line data to the console
+// Detect Cmd + N or Ctrl + N to open prompt for JSON input
+// Combined event listener for both save (Ctrl/Cmd + S) and new (Ctrl/Cmd + N)
 document.addEventListener('keydown', function(e) {
-    if (e.key === 's' && e.metaKey || e.key === 's' && e.ctrlKey) {
-        e.preventDefault();
-        saveState();
+    if (e.ctrlKey || e.metaKey) {
+        // Ctrl + S or Cmd + S: Save the current state
+        if (e.key === 's') {
+            e.preventDefault();  // Prevent default browser save action
+            saveState();
+        }
+        
+        // Ctrl + N or Cmd + N: Open JSON input to create labels and lines
+        if (e.key === 'n') {
+            e.preventDefault();  // Prevent default browser new document action
+            const inputJSON = prompt("Enter the JSON data to create labels and lines:");
+            if (inputJSON) {
+                try {
+                    const parsedData = JSON.parse(inputJSON);
+                    loadFromJSON(parsedData);
+                } catch (error) {
+                    alert("Invalid JSON format. Please try again.");
+                }
+            }
+        }
     }
 });
 
+// Function to load labels and lines from provided JSON
+function loadFromJSON(data) {
+    // Clear existing labels and lines
+    clearAllLabelsAndLines();
+
+    // Load labels
+    if (data.labels) {
+        data.labels.forEach(labelData => {
+            const newLabel = document.createElement('div');
+            newLabel.classList.add('floating-label');
+            newLabel.innerText = labelData.text;
+            newLabel.style.left = `${labelData.left}px`;
+            newLabel.style.top = `${labelData.top}px`;
+
+            document.body.appendChild(newLabel);
+
+            labelPositions.push({
+                element: newLabel,
+                left: labelData.left,
+                top: labelData.top,
+                width: newLabel.offsetWidth,
+                height: newLabel.offsetHeight
+            });
+
+            makeLabelDraggableAndEditable(newLabel);
+        });
+    }
+
+    // Load lines
+    if (data.lines) {
+        data.lines.forEach(lineData => {
+            const label1 = findLabelByText(lineData.from);
+            const label2 = findLabelByText(lineData.to);
+
+            if (label1 && label2) {
+                drawLineBetweenLabels(label1, label2);
+            }
+        });
+    }
+}
+
+// Function to clear all existing labels and lines
+function clearAllLabelsAndLines() {
+    labels.forEach(label => label.remove());
+    labels = [];
+
+    lines = [];
+    labelPositions = [];
+    ctx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
+}
+
+// Function to find a label by its text
+function findLabelByText(text) {
+    return labelPositions.find(labelPos => labelPos.element.innerText.trim() === text)?.element;
+}
+
+
 function saveState() {
     const labelsData = labelPositions.map(labelPos => ({
-        text: labelPos.element.innerText.trim(),
-        left: labelPos.left,
-        top: labelPos.top
+        text: labelPos.element.innerText.trim(),  // Get only the innerText (label content)
+        left: labelPos.left,                      // Get the x (left) position of the label
+        top: labelPos.top                         // Get the y (top) position of the label
     }));
 
     const linesData = lines.map(line => ({
-        from: line.label1.innerText.trim(),
-        to: line.label2.innerText.trim(),
-        fromPosition: {
+        from: line.label1.innerText.trim(),       // Get the text of the first label connected by the line
+        to: line.label2.innerText.trim(),         // Get the text of the second label connected by the line
+        fromPosition: {                           // The starting position of the line
             x: line.x1,
             y: line.y1
         },
-        toPosition: {
+        toPosition: {                             // The ending position of the line
             x: line.x2,
             y: line.y2
         }
@@ -286,7 +360,6 @@ function saveState() {
         labels: labelsData,
         lines: linesData
     };
-    
-    console.log(JSON.stringify(state, null, 2));
-    //console.log("Current state of labels and lines:", state);
+
+    console.log(JSON.stringify(state, null, 2));  // Log the clean state as a formatted JSON string
 }
