@@ -237,27 +237,99 @@ function updateLines() {
 
     // Redraw each line
     lines.forEach(line => {
-        const rect1 = line.label1.getBoundingClientRect();
-        const rect2 = line.label2.getBoundingClientRect();
+        
 
-        const x1 = rect1.left + rect1.width / 2;
-        const y1 = rect1.top + rect1.height / 2;
-        const x2 = rect2.left + rect2.width / 2;
-        const y2 = rect2.top + rect2.height / 2;
+
+        const label1Rect = line.label1.getBoundingClientRect();
+        const label2Rect = line.label2.getBoundingClientRect();
+
+        // Get center points of both labels
+        const label1Center = getLabelCenter(label1Rect);
+        const label2Center = getLabelCenter(label2Rect);
+
+        // Calculate the differences in positions
+        const deltaX = label2Center.x - label1Center.x;
+        const deltaY = label2Center.y - label1Center.y;
+
+        // Determine from which side of label1 to start and which side of label2 to end
+        let startX, startY, endX, endY;
+
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            // The labels are mostly horizontally aligned
+            if (deltaX > 0) {
+                // Label 2 is to the right of Label 1
+                startX = label1Rect.right;
+                startY = label1Center.y;
+                endX = label2Rect.left;
+                endY = label2Center.y;
+            } else {
+                // Label 2 is to the left of Label 1
+                startX = label1Rect.left;
+                startY = label1Center.y;
+                endX = label2Rect.right;
+                endY = label2Center.y;
+            }
+        } else {
+            // The labels are mostly vertically aligned
+            if (deltaY > 0) {
+                // Label 2 is below Label 1
+                startX = label1Center.x;
+                startY = label1Rect.bottom;
+                endX = label2Center.x;
+                endY = label2Rect.top;
+            } else {
+                // Label 2 is above Label 1
+                startX = label1Center.x;
+                startY = label1Rect.top;
+                endX = label2Center.x;
+                endY = label2Rect.bottom;
+            }
+        }
+
+        // const x1 = rect1.left + rect1.width / 2;
+        // const y1 = rect1.top + rect1.height / 2;
+        // const x2 = rect2.left + rect2.width / 2;
+        // const y2 = rect2.top + rect2.height / 2;
 
         ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
         ctx.strokeStyle = '#e74c3c';  // Line color (red)
         ctx.lineWidth = 2;
         ctx.stroke();
 
         // Update the stored positions for the line
-        line.x1 = x1;
-        line.y1 = y1;
-        line.x2 = x2;
-        line.y2 = y2;
+        line.x1 = startX;
+        line.y1 = startY;
+        line.x2 = endX;
+        line.y2 = endY;
+
+        console.log("called");
+
+        
+
+        // Draw arrowhead
+        const headLength = 30; // Length of arrow head
+        const angle = Math.atan2(endY - startY, endX - startX); // Calculate angle of the line
+        ctx.beginPath();
+        ctx.moveTo(endX, endY);
+        ctx.strokeStyle = 'blue';
+        ctx.lineTo(endX - headLength * Math.cos(angle - Math.PI / 6), endY - headLength * Math.sin(angle - Math.PI / 6));
+        //ctx.stroke();
+        ctx.lineTo(endX - headLength * Math.cos(angle + Math.PI / 6), endY - headLength * Math.sin(angle + Math.PI / 6));
+        //ctx.lineTo(x2, y2);
+        ctx.closePath();
+        ctx.fillStyle = 'blue'; // Fill color for the arrowhead
+        ctx.fill();
     });
+}
+
+// Function to get the center of a label
+function getLabelCenter(rect) {
+    return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+    };
 }
 
 // Track if the Shift key is pressed
