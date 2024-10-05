@@ -2,6 +2,10 @@
 let labels = document.querySelectorAll('.floating-label');
 let selectedLabels = [];
 let labelPositions = [];
+let selectedLabel = null; // Keep track of the label to apply the color
+
+// Get the color picker element
+const colorPicker = document.getElementById('colorPicker');
 
 // For line drawing
 let isShiftPressed = false;
@@ -30,13 +34,15 @@ function setInitialPositions() {
 
         label.style.left = `${xPos}px`;
         label.style.top = `${yPos}px`;
+        label.style.color = "#3498db";
 
         labelPositions.push({
             element: label,
             left: xPos,
             top: yPos,
             width: label.offsetWidth,
-            height: label.offsetHeight
+            height: label.offsetHeight,
+            color: getComputedStyle(label).color // Add color property to label position
         });
     });
 }
@@ -136,9 +142,29 @@ function makeLabelDraggableAndEditable(label) {
                 drawLineBetweenLabels(firstLabel, label); // Draw a line between first and second labels
                 firstLabel = null; // Reset the first label
             }
+        } else {
+            selectedLabel = label; //Store the clicked label for color application
         }
     });
 }
+
+
+
+// Update the label's color when colorPicker changes
+colorPicker.addEventListener('input', function(){
+    if (selectedLabel){
+        const newColor = colorPicker.value;
+        selectedLabel.style.color = newColor;
+        selectedLabel.style.borderColor = newColor;
+
+        // Update the label color in labelPositions
+        labelPositions.forEach(pos => {
+            if (pos.element === selectedLabel){
+                pos.color = newColor;
+            }
+        })
+    }
+})
 
 // Function to handle label selection
 function handleSelection(e, label) {
@@ -156,7 +182,29 @@ function handleSelection(e, label) {
         selectedLabels.forEach(l => l.classList.remove('selected'));
         selectedLabels = [label];
         label.classList.add('selected');
+        updateColorPicker(label);
     }
+
+    
+}
+
+// Function to update color picker based on selected label's color
+function updateColorPicker(label) {
+    const colorPicker = document.getElementById('colorPicker'); // Ensure this matches your HTML
+    const currentColor = label.style.color; // Get the current color of the label
+    colorPicker.value = rgbToHex(currentColor); // Update the color picker value to the label's color
+}
+
+// Function to convert RGB color to HEX (if needed)
+function rgbToHex(rgb) {
+    const rgbArray = rgb.match(/\d+/g); // Extract RGB values
+    if (rgbArray) {
+        const r = parseInt(rgbArray[0]);
+        const g = parseInt(rgbArray[1]);
+        const b = parseInt(rgbArray[2]);
+        return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+    }
+    return '#000000'; // Default to black if not valid
 }
 
 // Function to draw a line between two labels
@@ -292,6 +340,8 @@ function loadFromJSON(data) {
             newLabel.innerText = labelData.text;
             newLabel.style.left = `${labelData.left}px`;
             newLabel.style.top = `${labelData.top}px`;
+            newLabel.style.color = labelData.color;
+            newLabel.style.borderColor = labelData.color;
 
             document.body.appendChild(newLabel);
 
@@ -300,7 +350,8 @@ function loadFromJSON(data) {
                 left: labelData.left,
                 top: labelData.top,
                 width: newLabel.offsetWidth,
-                height: newLabel.offsetHeight
+                height: newLabel.offsetHeight,
+                color: labelData.color
             });
 
             makeLabelDraggableAndEditable(newLabel);
@@ -340,7 +391,8 @@ function saveState() {
     const labelsData = labelPositions.map(labelPos => ({
         text: labelPos.element.innerText.trim(),  // Get only the innerText (label content)
         left: labelPos.left,                      // Get the x (left) position of the label
-        top: labelPos.top                         // Get the y (top) position of the label
+        top: labelPos.top,                        // Get the y (top) position of the label
+        color: labelPos.color || "#3498db"        // Include color (default if not set)
     }));
 
     const linesData = lines.map(line => ({
