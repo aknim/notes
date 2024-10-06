@@ -207,6 +207,42 @@ function rgbToHex(rgb) {
     return '#000000'; // Default to black if not valid
 }
 
+// Delete button click handler
+const deleteButton = document.getElementById('deleteButton');
+
+// Function to delete the selected label
+function deleteSelectedLabel() {
+    if (selectedLabel) {
+        // Remove the label from the DOM
+        selectedLabel.remove(); 
+
+        // Remove the label from the labelPositions array
+        labelPositions = labelPositions.filter(pos => pos.element !== selectedLabel);
+
+        // Update lines if any were connected to the deleted label
+        lines = lines.filter(line => {
+
+            if (line.label1 === selectedLabel || line.label2 === selectedLabel) {
+                console.log("called");
+                return false; // Remove lines connected to the deleted label
+            }
+            return true;
+        });
+        updateLines(); // Redraw lines after deletion
+
+        selectedLabel = null; // Clear the selection
+    }
+}
+
+deleteButton.addEventListener('click', deleteSelectedLabel);
+
+// Optionally, listen for 'Delete' key press to delete label
+ document.addEventListener('keydown', (event) => {
+    if ((event.key === 'Backspace' || event.key === 'Delete') && selectedLabel) {
+        deleteSelectedLabel(); 
+    }
+ });
+
 // Function to draw a line between two labels
 function drawLineBetweenLabels(label1, label2) {
     const rect1 = label1.getBoundingClientRect();
@@ -303,10 +339,6 @@ function updateLines() {
         line.y1 = startY;
         line.x2 = endX;
         line.y2 = endY;
-
-        console.log("called");
-
-        
 
         // Draw arrowhead
         const headLength = 30; // Length of arrow head
