@@ -1,11 +1,10 @@
 // Get all draggable labels
 let labels = document.querySelectorAll('.floating-label');
 let selectedLabels = [];
+let selectedItems = [];
 let labelPositions = [];
 let selectedLabel = null; // Keep track of the label to apply the color
-
-// Get the color picker element
-const colorPicker = document.getElementById('colorPicker');
+let selectedLine = null;
 
 // For line drawing
 let isShiftPressed = false;
@@ -14,14 +13,29 @@ let lineCanvas = document.getElementById('lineCanvas');
 let ctx = lineCanvas.getContext('2d');
 let lines = []; // Store drawn lines between labels
 
+let tmp = null;
+
+// Buttons
+const deleteButton = document.getElementById('deleteButton');
+const flipLineButton = document.getElementById('flipButton');
+const colorPicker = document.getElementById('colorPicker');
+
+deleteButton.addEventListener('click', deleteSelectedItem);
+flipLineButton.addEventListener('click', flipLineDirection);
+colorPicker.addEventListener('input', changeSelectedItemColor);
+
+resizeCanvas();// Initialize positions for existing labels
+setInitialPositions();
+// Apply draggable and editable behavior to existing labels
+labels.forEach(label => makeLabelDraggableAndEditable(label));
+
+// #region INITIALISING FUNCTIONS
+
 // Resize the canvas to the window size
 function resizeCanvas() {
     lineCanvas.width = window.innerWidth;
     lineCanvas.height = window.innerHeight;
 }
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-
 // Set initial positions for non-overlapping
 function setInitialPositions() {
     let startX = 100;
@@ -47,27 +61,197 @@ function setInitialPositions() {
     });
 }
 
-// Function to detect overlap
-function isOverlapping(element, xPos, yPos) {
-    const elemWidth = element.offsetWidth;
-    const elemHeight = element.offsetHeight;
+// #endregion
 
-    for (let i = 0; i < labelPositions.length; i++) {
-        const otherLabel = labelPositions[i];
 
-        if (element !== otherLabel.element) {
-            if (
-                xPos < otherLabel.left + otherLabel.width &&
-                xPos + elemWidth > otherLabel.left &&
-                yPos < otherLabel.top + otherLabel.height &&
-                yPos + elemHeight > otherLabel.top
-            ) {
-                return true;
+
+// #region EVENT LISTENERS 
+
+window.addEventListener('resize', resizeCanvas);
+
+// Optionally, listen for 'Delete' key press to delete label
+document.addEventListener('keydown', (event) => {
+    if ((event.key === 'Backspace' || event.key === 'Delete') && ((event.ctrlKey)&&(selectedLabel||selectedLine))) {
+        deleteSelectedItem(); 
+    }
+ });
+
+ // Detect Cmd + N or Ctrl + N to open prompt for JSON input
+// Combined event listener for both save (Ctrl/Cmd + S) and new (Ctrl/Cmd + N)
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        // Ctrl + S or Cmd + S: Save the current state
+        if (e.key === 's') {
+            e.preventDefault();  // Prevent default browser save action
+            saveState();
+        }
+        
+        // Ctrl + N or Cmd + N: Open JSON input to create labels and lines
+        if (e.key === 'n') {
+            e.preventDefault();  // Prevent default browser new document action
+            const inputJSON = prompt("Enter the JSON data to create labels and lines:");
+            if (inputJSON) {
+                try {
+                    const parsedData = JSON.parse(inputJSON);
+                    loadFromJSON(parsedData);
+                } catch (error) {
+                    alert("Invalid JSON format. Please try again.");
+                }
             }
         }
     }
-    return false;
+});
+
+// Track if the Shift key is pressed
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Shift') {
+        isShiftPressed = true;
+    }
+});
+
+// Shift releasing
+document.addEventListener('keyup', function(e) {
+    if (e.key === 'Shift') {
+        isShiftPressed = false;
+        firstLabel = null;  // Reset first label if shift is released
+    }
+});
+
+// Selecting Line
+document.addEventListener('click', function(e) {
+    const clickX = e.clientX;
+    const clickY = e.clientY; 
+
+    lines.forEach((line, index) => {
+        if (isClickNearLine(clickX, clickY, line)) {
+            selectLine(line);
+            selectedLabel = null;
+            redrawLines();
+        }
+        else{
+            unselectLine(line);
+        }
+    });
+});
+
+// Double-click to create a new label
+document.addEventListener('dblclick', function(e) {
+
+    const clickX = e.clientX;
+    const clickY = e.clientY;
+
+    // Check if user double-clicked near any of the lines
+    lines.forEach((line, index) => {
+        if (isClickNearLine(clickX, clickY, line)) {
+            selectedLine = line;
+        }
+    })
+
+    // If a line is found, flip its direction
+    if (selectedLine!=null) {
+        console.log("calling flipLineDirection after doubleClick");
+        flipLineDirection();
+        return;
+    }
+
+    // Create a new label
+    const newLabel = document.createElement('div');
+    newLabel.classList.add('floating-label', 'editable');
+    newLabel.contentEditable = true;
+    newLabel.innerText = 'New Label';
+    newLabel.style.left = `${e.clientX}px`;
+    newLabel.style.top = `${e.clientY}px`;
+
+    // Add to the document and make it draggable and editable
+    document.body.appendChild(newLabel);
+    labelPositions.push({
+        element: newLabel,
+        left: e.clientX,
+        top: e.clientY,
+        width: newLabel.offsetWidth,
+        height: newLabel.offsetHeight
+    });
+    makeLabelDraggableAndEditable(newLabel);
+});
+
+
+
+// #endregion
+
+// #region COLOR FUNCTIONS 
+
+colorPicker.addEventListener("click", function(e) {
+    e.stopPropagation();
+})
+
+// Update the label's color when colorPicker changes
+function changeSelectedItemColor(e){
+    e.stopPropagation();
+    if (selectedLabel) changeSelectedLabelColor();
+    else if (selectedLine) changeSelectedLineColor();
 }
+
+function changeSelectedLabelColor(){
+    const newColor = colorPicker.value;
+    selectedLabel.style.color = newColor;
+    selectedLabel.style.borderColor = newColor;
+
+    // Update the label color in labelPositions
+    labelPositions.forEach(pos => {
+        if (pos.element === selectedLabel){
+            pos.color = newColor;
+        }
+    })
+}
+
+// Update the label's color when colorPicker changes
+function changeSelectedLineColor(){
+        const newColor = colorPicker.value;
+        selectedLine.color = newColor;
+
+        // Update the label color in labelPositions
+        lines.forEach(line => {
+            if (line=== selectedLine){
+                line.color = newColor;
+            }
+        });
+        redrawLines();
+}
+
+
+
+// Function to update color picker based on selected item's color
+function updateColorPickerFromLabel(label){
+    const colorPicker = document.getElementById('colorPicker'); 
+    
+    const currentColor = label.style.color; // Color of label
+    colorPicker.value = rgbToHex(currentColor); // Update the color picker value to the label's color
+}
+
+// Function to update color picker based on selected item's color
+function updateColorPickerFromLine(line){
+    const colorPicker = document.getElementById('colorPicker'); 
+    
+    const currentColor = line.color; // Color of line
+    colorPicker.value = currentColor; // Update the color picker value to the line's color
+}
+
+// Function to convert RGB color to HEX (if needed)
+function rgbToHex(rgb) {
+    const rgbArray = rgb.match(/\d+/g); // Extract RGB values
+    if (rgbArray) {
+        const r = parseInt(rgbArray[0]);
+        const g = parseInt(rgbArray[1]);
+        const b = parseInt(rgbArray[2]);
+        return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+    }
+    return '#000000'; // Default to black if not valid
+}
+
+// #endregion
+
+
+
 
 // Make labels draggable and editable on double-click
 function makeLabelDraggableAndEditable(label) {
@@ -101,7 +285,7 @@ function makeLabelDraggableAndEditable(label) {
             if (!isOverlapping(label, newLeft, newTop)) {
                 label.style.left = `${newLeft}px`;
                 label.style.top = `${newTop}px`;
-                updateLines(); // Update lines when label is dragged
+                redrawLines(); // Update lines when label is dragged
             }
         }
     });
@@ -148,23 +332,27 @@ function makeLabelDraggableAndEditable(label) {
     });
 }
 
+// Function to detect overlap
+function isOverlapping(element, xPos, yPos) {
+    const elemWidth = element.offsetWidth;
+    const elemHeight = element.offsetHeight;
 
+    for (let i = 0; i < labelPositions.length; i++) {
+        const otherLabel = labelPositions[i];
 
-// Update the label's color when colorPicker changes
-colorPicker.addEventListener('input', function(){
-    if (selectedLabel){
-        const newColor = colorPicker.value;
-        selectedLabel.style.color = newColor;
-        selectedLabel.style.borderColor = newColor;
-
-        // Update the label color in labelPositions
-        labelPositions.forEach(pos => {
-            if (pos.element === selectedLabel){
-                pos.color = newColor;
+        if (element !== otherLabel.element) {
+            if (
+                xPos < otherLabel.left + otherLabel.width &&
+                xPos + elemWidth > otherLabel.left &&
+                yPos < otherLabel.top + otherLabel.height &&
+                yPos + elemHeight > otherLabel.top
+            ) {
+                return true;
             }
-        })
+        }
     }
-})
+    return false;
+}
 
 // Function to handle label selection
 function handleSelection(e, label) {
@@ -182,33 +370,37 @@ function handleSelection(e, label) {
         selectedLabels.forEach(l => l.classList.remove('selected'));
         selectedLabels = [label];
         label.classList.add('selected');
-        updateColorPicker(label);
+        updateColorPickerFromLabel(label);
     }
 
     
 }
 
-// Function to update color picker based on selected label's color
-function updateColorPicker(label) {
-    const colorPicker = document.getElementById('colorPicker'); // Ensure this matches your HTML
-    const currentColor = label.style.color; // Get the current color of the label
-    colorPicker.value = rgbToHex(currentColor); // Update the color picker value to the label's color
+// Function to find a label by its text
+function findLabelByText(text) {
+    return labelPositions.find(labelPos => labelPos.element.innerText.trim() === text)?.element;
 }
 
-// Function to convert RGB color to HEX (if needed)
-function rgbToHex(rgb) {
-    const rgbArray = rgb.match(/\d+/g); // Extract RGB values
-    if (rgbArray) {
-        const r = parseInt(rgbArray[0]);
-        const g = parseInt(rgbArray[1]);
-        const b = parseInt(rgbArray[2]);
-        return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+// #region DELETE FUNCTIONS 
+
+// Function to delete selected label or line
+function deleteSelectedItem() {
+    if (selectedLabel) {
+        deleteSelectedLabel();
+        selectedLabel = null;
+    } else if (selectedLine){
+        deleteSelectedLine();
+        selectedLine = null;
     }
-    return '#000000'; // Default to black if not valid
 }
 
-// Delete button click handler
-const deleteButton = document.getElementById('deleteButton');
+// Function to delete the selected line
+function deleteSelectedLine(){
+    if(selectedLine !== null){
+        lines.splice(selectedLine, 1);
+        redrawLines();
+    }
+}
 
 // Function to delete the selected label
 function deleteSelectedLabel() {
@@ -223,28 +415,46 @@ function deleteSelectedLabel() {
         lines = lines.filter(line => {
 
             if (line.label1 === selectedLabel || line.label2 === selectedLabel) {
-                console.log("called");
                 return false; // Remove lines connected to the deleted label
             }
             return true;
         });
-        updateLines(); // Redraw lines after deletion
+        redrawLines(); // Redraw lines after deletion
 
         selectedLabel = null; // Clear the selection
     }
 }
 
-deleteButton.addEventListener('click', deleteSelectedLabel);
+// #endregion
 
-// Optionally, listen for 'Delete' key press to delete label
- document.addEventListener('keydown', (event) => {
-    if ((event.key === 'Backspace' || event.key === 'Delete') && selectedLabel) {
-        deleteSelectedLabel(); 
-    }
- });
+// Function to get the center of a label
+function getLabelCenter(rect) {
+    return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+    };
+}
+
+// Function to flip the direction of a line
+function flipLineDirection(){
+    console.log("flipping");
+    const tempLabel = selectedLine.label1;
+    selectedLine.label1 = selectedLine.label2;
+    selectedLine.label2 = tempLabel;
+
+    // Swap the starting and ending points as well
+    const tempX = selectedLine.x1;
+    const tempY = selectedLine.y1;
+    selectedLine.x1 = selectedLine.x2;
+    selectedLine.y1 = selectedLine.y2;
+    selectedLine.x2 = tempX;
+    selectedLine.y2 = tempY;
+
+    redrawLines(); // Redraw all lines after flipping
+}
 
 // Function to draw a line between two labels
-function drawLineBetweenLabels(label1, label2) {
+function drawLineBetweenLabels(label1, label2, lineColor, lineWidth) {
     const rect1 = label1.getBoundingClientRect();
     const rect2 = label2.getBoundingClientRect();
 
@@ -254,28 +464,30 @@ function drawLineBetweenLabels(label1, label2) {
     const y2 = rect2.top + rect2.height / 2;
 
     // Store the line information for later updates
-    lines.push({
+    let l = {
         label1,
         label2,
         x1,
         y1,
         x2,
-        y2
-    });
+        y2,
+        color: lineColor?lineColor: "#e74c3c",
+        width: lineWidth?lineWidth:2,
+    };
+    selectLine(l);
+    lines.push(l);
 
-    updateLines();
+    redrawLines();
 }
 
-// Function to update all drawn lines
-function updateLines() {
+
+// Function to clear and drawn all lines
+function redrawLines() {
     // Clear the canvas
     ctx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
 
     // Redraw each line
     lines.forEach(line => {
-        
-
-
         const label1Rect = line.label1.getBoundingClientRect();
         const label2Rect = line.label2.getBoundingClientRect();
 
@@ -322,17 +534,25 @@ function updateLines() {
             }
         }
 
-        // const x1 = rect1.left + rect1.width / 2;
-        // const y1 = rect1.top + rect1.height / 2;
-        // const x2 = rect2.left + rect2.width / 2;
-        // const y2 = rect2.top + rect2.height / 2;
+        
+
+        if(line===selectedLine){
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';  // Line color (red)
+            ctx.lineWidth = 8;
+            ctx.stroke();
+            ctx.closePath();
+        }
 
         ctx.beginPath();
         ctx.moveTo(startX, startY);
         ctx.lineTo(endX, endY);
-        ctx.strokeStyle = '#e74c3c';  // Line color (red)
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = line.color?line.color:'#e74c3c';  // Line color (red)
+        ctx.lineWidth = 2;//line.width;
         ctx.stroke();
+        ctx.closePath();
 
         // Update the stored positions for the line
         line.x1 = startX;
@@ -356,86 +576,46 @@ function updateLines() {
     });
 }
 
-// Function to get the center of a label
-function getLabelCenter(rect) {
-    return {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2
+
+
+// #region SAVE & LOAD 
+
+function saveState() {
+    const labelsData = labelPositions.map(labelPos => ({
+        text: labelPos.element.innerText.trim(),  // Get only the innerText (label content)
+        left: labelPos.left,                      // Get the x (left) position of the label
+        top: labelPos.top,                        // Get the y (top) position of the label
+        color: labelPos.color || "#3498db"        // Include color (default if not set)
+    }));
+
+    const linesData = lines.map(line => ({
+        from: line.label1.innerText.trim(),       // Get the text of the first label connected by the line
+        to: line.label2.innerText.trim(),         // Get the text of the second label connected by the line
+        fromPosition: {                           // The starting position of the line
+            x: line.x1,
+            y: line.y1
+        },
+        toPosition: {                             // The ending position of the line
+            x: line.x2,
+            y: line.y2
+        },
+        color: line.color || "#e74c3c",
+        width: line.width || 2,
+    }));
+
+    const state = {
+        labels: labelsData,
+        lines: linesData
     };
+
+    console.log(JSON.stringify(state, null, 2));  // Log the clean state as a formatted JSON string
 }
-
-// Track if the Shift key is pressed
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Shift') {
-        isShiftPressed = true;
-    }
-});
-
-document.addEventListener('keyup', function(e) {
-    if (e.key === 'Shift') {
-        isShiftPressed = false;
-        firstLabel = null;  // Reset first label if shift is released
-    }
-});
-
-// Double-click to create a new label
-document.addEventListener('dblclick', function(e) {
-    // Create a new label
-    const newLabel = document.createElement('div');
-    newLabel.classList.add('floating-label', 'editable');
-    newLabel.contentEditable = true;
-    newLabel.innerText = 'New Label';
-    newLabel.style.left = `${e.clientX}px`;
-    newLabel.style.top = `${e.clientY}px`;
-
-    // Add to the document and make it draggable and editable
-    document.body.appendChild(newLabel);
-    labelPositions.push({
-        element: newLabel,
-        left: e.clientX,
-        top: e.clientY,
-        width: newLabel.offsetWidth,
-        height: newLabel.offsetHeight
-    });
-    makeLabelDraggableAndEditable(newLabel);
-});
-
-// Apply draggable and editable behavior to existing labels
-labels.forEach(label => makeLabelDraggableAndEditable(label));
-
-// Initialize positions for existing labels
-setInitialPositions();
-// Detect Cmd + N or Ctrl + N to open prompt for JSON input
-// Combined event listener for both save (Ctrl/Cmd + S) and new (Ctrl/Cmd + N)
-document.addEventListener('keydown', function(e) {
-    if (e.ctrlKey || e.metaKey) {
-        // Ctrl + S or Cmd + S: Save the current state
-        if (e.key === 's') {
-            e.preventDefault();  // Prevent default browser save action
-            saveState();
-        }
-        
-        // Ctrl + N or Cmd + N: Open JSON input to create labels and lines
-        if (e.key === 'n') {
-            e.preventDefault();  // Prevent default browser new document action
-            const inputJSON = prompt("Enter the JSON data to create labels and lines:");
-            if (inputJSON) {
-                try {
-                    const parsedData = JSON.parse(inputJSON);
-                    loadFromJSON(parsedData);
-                } catch (error) {
-                    alert("Invalid JSON format. Please try again.");
-                }
-            }
-        }
-    }
-});
 
 // Function to load labels and lines from provided JSON
 function loadFromJSON(data) {
     // Clear existing labels and lines
     clearAllLabelsAndLines();
-
+    tmp = data;
     // Load labels
     if (data.labels) {
         data.labels.forEach(labelData => {
@@ -467,9 +647,8 @@ function loadFromJSON(data) {
         data.lines.forEach(lineData => {
             const label1 = findLabelByText(lineData.from);
             const label2 = findLabelByText(lineData.to);
-
             if (label1 && label2) {
-                drawLineBetweenLabels(label1, label2);
+                drawLineBetweenLabels(label1, label2, lineData.color, lineData.width);
             }
         });
     }
@@ -485,37 +664,59 @@ function clearAllLabelsAndLines() {
     ctx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
 }
 
-// Function to find a label by its text
-function findLabelByText(text) {
-    return labelPositions.find(labelPos => labelPos.element.innerText.trim() === text)?.element;
+// #endregion
+
+// #region HELPER LINE FUNCTIONS
+
+// Function to highlight the selected line
+function selectLine(line) {
+    // Update line appearance for selection (e.g., change color or width)
+    selectedLine = line;
+    updateColorPickerFromLine(selectedLine);
+    redrawLines();
 }
 
-
-function saveState() {
-    const labelsData = labelPositions.map(labelPos => ({
-        text: labelPos.element.innerText.trim(),  // Get only the innerText (label content)
-        left: labelPos.left,                      // Get the x (left) position of the label
-        top: labelPos.top,                        // Get the y (top) position of the label
-        color: labelPos.color || "#3498db"        // Include color (default if not set)
-    }));
-
-    const linesData = lines.map(line => ({
-        from: line.label1.innerText.trim(),       // Get the text of the first label connected by the line
-        to: line.label2.innerText.trim(),         // Get the text of the second label connected by the line
-        fromPosition: {                           // The starting position of the line
-            x: line.x1,
-            y: line.y1
-        },
-        toPosition: {                             // The ending position of the line
-            x: line.x2,
-            y: line.y2
-        }
-    }));
-
-    const state = {
-        labels: labelsData,
-        lines: linesData
-    };
-
-    console.log(JSON.stringify(state, null, 2));  // Log the clean state as a formatted JSON string
+// Function to unhighlight non-selected lines
+function unselectLine(line){
+    // Restore line appearance to default
+    if(line===selectedLine) selectedLine = null;
+    redrawLines();
 }
+
+// Helper function to check if a click is near a line
+function isClickNearLine(x, y, line) {
+    const tolerance = 5; // Distance in pixels to consider a "near" click
+    const distance = pointToLineDistance(x, y, line.x1, line.y1, line.x2, line.y2);
+    return distance <= tolerance;
+}
+
+// Calculate the distance from a point to a line segment
+function pointToLineDistance(px, py, x1, y1, x2, y2) {
+    const A = px - x1;
+    const B = py - y1;
+    const C = x2 - x1;
+    const D = y2 - y1;
+
+    const dot = A * C + B * D;
+    const len_sq = C * C + D * D;
+    const param = len_sq !==0 ? dot / len_sq : -1;
+
+    let xx, yy;
+
+    if (param <0) {
+        xx = x1;
+        yy = y1;
+    } else if (param > 1) {
+        xx = x2;
+        yy = y2;
+    } else {
+        xx = x1 + param * C;
+        yy = y1 + param * D;
+    }
+
+    const dx = px - xx;
+    const dy = py - yy;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// #endregion

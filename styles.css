@@ -58,6 +58,13 @@ button:hover {
     background-color: #c0392b;
 }
 
+#flipButton {
+    background-color: #4ce73c;
+}
+#flipButton:hover{
+    background-color: #39c02b;
+}
+
 .controls-container {
     position: absolute;
     bottom: 10px;
