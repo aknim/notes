@@ -387,17 +387,17 @@ function findLabelByText(text) {
 function deleteSelectedItem() {
     if (selectedLabel) {
         deleteSelectedLabel();
-        selectedLabel = null;
     } else if (selectedLine){
         deleteSelectedLine();
-        selectedLine = null;
     }
 }
 
 // Function to delete the selected line
 function deleteSelectedLine(){
     if(selectedLine !== null){
-        lines.splice(selectedLine, 1);
+        let index = lines.findIndex(e => e === selectedLine);
+        lines.splice(index, 1);
+        selectedLine = null; 
         redrawLines();
     }
 }
@@ -437,7 +437,6 @@ function getLabelCenter(rect) {
 
 // Function to flip the direction of a line
 function flipLineDirection(){
-    console.log("flipping");
     const tempLabel = selectedLine.label1;
     selectedLine.label1 = selectedLine.label2;
     selectedLine.label2 = tempLabel;
@@ -488,6 +487,7 @@ function redrawLines() {
 
     // Redraw each line
     lines.forEach(line => {
+
         const label1Rect = line.label1.getBoundingClientRect();
         const label2Rect = line.label2.getBoundingClientRect();
 
