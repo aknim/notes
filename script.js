@@ -49,7 +49,6 @@ function setInitialPositions() {
         label.style.left = `${xPos}px`;
         label.style.top = `${yPos}px`;
         label.style.color = "#3498db";
-
         labelPositions.push({
             element: label,
             left: xPos,
@@ -149,7 +148,6 @@ document.addEventListener('dblclick', function(e) {
 
     // If a line is found, flip its direction
     if (selectedLine!=null) {
-        console.log("calling flipLineDirection after doubleClick");
         flipLineDirection();
         return;
     }
@@ -164,6 +162,7 @@ document.addEventListener('dblclick', function(e) {
 
     // Add to the document and make it draggable and editable
     document.body.appendChild(newLabel);
+
     labelPositions.push({
         element: newLabel,
         left: e.clientX,
@@ -177,6 +176,53 @@ document.addEventListener('dblclick', function(e) {
 
 
 // #endregion
+
+document.addEventListener('keydown', function(e) {
+    // Check if it's Cmd + Shift + 'c' 
+    if (e.shiftKey && e.key.toLowerCase() === 'c') {
+        if (selectedLabel) {
+            collapseLabel(selectedLabel); // Collapse the selected label
+        }
+    } 
+});
+
+function collapseLabel(label) {
+    label.collapsed = !label.collapsed;
+    if (label.collapsed) {
+        label.style.backgroundColor = 'lightgray'; 
+        hideNextLabelsAndLines(label);
+        redrawLines();
+    } else {
+        label.style.backgroundColor = label.originalColor || 'white';
+        showNextLabelsAndLines(label);
+        redrawLines();
+    }
+}
+
+// Recursively hide next labels and lines
+function hideNextLabelsAndLines(label) {
+    lines.forEach(line => {
+        if (line.label1 === label) {
+            line.hidden = true; 
+            line.label2.style.visibility = 'hidden';
+            label.collapsed = true;
+            hideNextLabelsAndLines(line.label2);
+        }
+    });
+}
+
+// Recursively show next labels and lines
+function showNextLabelsAndLines(label) {
+    lines.forEach(line => {
+        if (line.label1 === label) {
+            line.hidden = false;
+            line.label2.style.visibility = 'visible';
+            line.label2.style.backgroundColor = label.originalColor || 'white';
+            label.collapsed = false;
+            showNextLabelsAndLines(line.label2);
+        }
+    });
+}
 
 // #region COLOR FUNCTIONS 
 
@@ -487,7 +533,7 @@ function redrawLines() {
 
     // Redraw each line
     lines.forEach(line => {
-
+        if (line.hidden) return; 
         const label1Rect = line.label1.getBoundingClientRect();
         const label2Rect = line.label2.getBoundingClientRect();
 
@@ -582,15 +628,15 @@ function redrawLines() {
 
 function saveState() {
     const labelsData = labelPositions.map(labelPos => ({
-        text: labelPos.element.innerText.trim(),  // Get only the innerText (label content)
+        text: labelPos.element.textContent.trim(),  // Get only the innerText (label content)
         left: labelPos.left,                      // Get the x (left) position of the label
         top: labelPos.top,                        // Get the y (top) position of the label
         color: labelPos.color || "#3498db"        // Include color (default if not set)
     }));
 
     const linesData = lines.map(line => ({
-        from: line.label1.innerText.trim(),       // Get the text of the first label connected by the line
-        to: line.label2.innerText.trim(),         // Get the text of the second label connected by the line
+        from: line.label1.textContent.trim(),       // Get the text of the first label connected by the line
+        to: line.label2.textContent.trim(),         // Get the text of the second label connected by the line
         fromPosition: {                           // The starting position of the line
             x: line.x1,
             y: line.y1
