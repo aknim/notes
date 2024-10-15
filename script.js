@@ -51,8 +51,8 @@ function setInitialPositions() {
         label.style.color = "#3498db";
         labelPositions.push({
             element: label,
-            left: xPos,
-            top: yPos,
+            // left: xPos,
+            // top: yPos,
             width: label.offsetWidth,
             height: label.offsetHeight,
             color: getComputedStyle(label).color // Add color property to label position
@@ -62,7 +62,9 @@ function setInitialPositions() {
 
 // #endregion
 
-
+function getValFromPx(position){
+    return parseFloat(position.replace('px', ''));
+}
 
 // #region EVENT LISTENERS 
 
@@ -165,8 +167,8 @@ document.addEventListener('dblclick', function(e) {
 
     labelPositions.push({
         element: newLabel,
-        left: e.clientX,
-        top: e.clientY,
+        // left: e.clientX,
+        // top: e.clientY,
         width: newLabel.offsetWidth,
         height: newLabel.offsetHeight
     });
@@ -181,12 +183,12 @@ document.addEventListener('keydown', function(e) {
     // Check if it's Cmd + Shift + 'c' 
     if (e.shiftKey && e.key.toLowerCase() === 'c') {
         if (selectedLabel) {
-            collapseLabel(selectedLabel); // Collapse the selected label
+            toggleCollapse(selectedLabel); // Collapse the selected label
         }
     } 
 });
 
-function collapseLabel(label) {
+function toggleCollapse(label) {
     label.collapsed = !label.collapsed;
     if (label.collapsed) {
         label.style.backgroundColor = 'lightgray'; 
@@ -205,7 +207,9 @@ function hideNextLabelsAndLines(label) {
         if (line.label1 === label) {
             line.hidden = true; 
             line.label2.style.visibility = 'hidden';
-            label.collapsed = true;
+            //label.visibility = 'hidden';
+            line.label2.collapsed = true; 
+            //line.label2.hidden = true;
             hideNextLabelsAndLines(line.label2);
         }
     });
@@ -218,7 +222,9 @@ function showNextLabelsAndLines(label) {
             line.hidden = false;
             line.label2.style.visibility = 'visible';
             line.label2.style.backgroundColor = label.originalColor || 'white';
-            label.collapsed = false;
+            //label.visibility = false;
+            line.label2.collapsed = false;
+            //line.label2.hidden = false;
             showNextLabelsAndLines(line.label2);
         }
     });
@@ -344,8 +350,11 @@ function makeLabelDraggableAndEditable(label) {
         // Update label position
         labelPositions.forEach(pos => {
             if (pos.element === label) {
-                pos.left = label.offsetLeft;
-                pos.top = label.offsetTop;
+                //here
+                // pos.left = label.offsetLeft;
+                // pos.top = label.offsetTop;
+                pos.element.style.left = `${label.offsetLeft}px`;
+                pos.element.style.top = `${label.offsetTop}px`;
             }
         });
     });
@@ -388,10 +397,10 @@ function isOverlapping(element, xPos, yPos) {
 
         if (element !== otherLabel.element) {
             if (
-                xPos < otherLabel.left + otherLabel.width &&
-                xPos + elemWidth > otherLabel.left &&
-                yPos < otherLabel.top + otherLabel.height &&
-                yPos + elemHeight > otherLabel.top
+                xPos < getValFromPx(otherLabel.element.style.left) + otherLabel.width &&
+                xPos + elemWidth > getValFromPx(otherLabel.element.style.left) &&
+                yPos < getValFromPx(otherLabel.element.style.top) + otherLabel.height &&
+                yPos + elemHeight > getValFromPx(otherLabel.element.style.top)
             ) {
                 return true;
             }
@@ -424,7 +433,7 @@ function handleSelection(e, label) {
 
 // Function to find a label by its text
 function findLabelByText(text) {
-    return labelPositions.find(labelPos => labelPos.element.innerText.trim() === text)?.element;
+    return labelPositions.find(labelPos => labelPos.element.textContent.trim() === text)?.element;
 }
 
 // #region DELETE FUNCTIONS 
@@ -499,7 +508,7 @@ function flipLineDirection(){
 }
 
 // Function to draw a line between two labels
-function drawLineBetweenLabels(label1, label2, lineColor, lineWidth) {
+function drawLineBetweenLabels(label1, label2, lineColor, lineWidth, lineHidden = false) {
     const rect1 = label1.getBoundingClientRect();
     const rect2 = label2.getBoundingClientRect();
 
@@ -518,6 +527,7 @@ function drawLineBetweenLabels(label1, label2, lineColor, lineWidth) {
         y2,
         color: lineColor?lineColor: "#e74c3c",
         width: lineWidth?lineWidth:2,
+        hidden: lineHidden,
     };
     selectLine(l);
     lines.push(l);
@@ -624,14 +634,18 @@ function redrawLines() {
 
 
 
+
 // #region SAVE & LOAD 
 
 function saveState() {
     const labelsData = labelPositions.map(labelPos => ({
         text: labelPos.element.textContent.trim(),  // Get only the innerText (label content)
-        left: labelPos.left,                      // Get the x (left) position of the label
-        top: labelPos.top,                        // Get the y (top) position of the label
-        color: labelPos.color || "#3498db"        // Include color (default if not set)
+        left: getValFromPx(labelPos.element.style.left),                      // Get the x (left) position of the label
+        top: getValFromPx(labelPos.element.style.top),                        // Get the y (top) position of the label
+        color: labelPos.color || "#3498db",        // Include color (default if not set)
+        collpased: labelPos.element.collapsed,
+        visibility: labelPos.element.style.visibility,
+        backgroundColor: labelPos.element.style.backgroundColor
     }));
 
     const linesData = lines.map(line => ({
@@ -645,6 +659,7 @@ function saveState() {
             x: line.x2,
             y: line.y2
         },
+        hidden: line.hidden,
         color: line.color || "#e74c3c",
         width: line.width || 2,
     }));
@@ -672,16 +687,19 @@ function loadFromJSON(data) {
             newLabel.style.top = `${labelData.top}px`;
             newLabel.style.color = labelData.color;
             newLabel.style.borderColor = labelData.color;
+            newLabel.style.visibility = labelData.visibility?labelData.visibility:'visible';
+            newLabel.style.backgroundColor = labelData.backgroundColor;
 
+            
             document.body.appendChild(newLabel);
-
             labelPositions.push({
                 element: newLabel,
-                left: labelData.left,
-                top: labelData.top,
+                // left: labelData.left,
+                // top: labelData.top,
                 width: newLabel.offsetWidth,
                 height: newLabel.offsetHeight,
-                color: labelData.color
+                color: labelData.color,
+                collapsed: labelData.collapsed
             });
 
             makeLabelDraggableAndEditable(newLabel);
@@ -694,7 +712,7 @@ function loadFromJSON(data) {
             const label1 = findLabelByText(lineData.from);
             const label2 = findLabelByText(lineData.to);
             if (label1 && label2) {
-                drawLineBetweenLabels(label1, label2, lineData.color, lineData.width);
+                drawLineBetweenLabels(label1, label2, lineData.color, lineData.width, lineData.hidden);
             }
         });
     }
