@@ -51,8 +51,6 @@ function setInitialPositions() {
         label.style.color = "#3498db";
         labelPositions.push({
             element: label,
-            // left: xPos,
-            // top: yPos,
             width: label.offsetWidth,
             height: label.offsetHeight,
             color: getComputedStyle(label).color // Add color property to label position
@@ -207,9 +205,7 @@ function hideNextLabelsAndLines(label) {
         if (line.label1 === label) {
             line.hidden = true; 
             line.label2.style.visibility = 'hidden';
-            //label.visibility = 'hidden';
             line.label2.collapsed = true; 
-            //line.label2.hidden = true;
             hideNextLabelsAndLines(line.label2);
         }
     });
@@ -222,9 +218,7 @@ function showNextLabelsAndLines(label) {
             line.hidden = false;
             line.label2.style.visibility = 'visible';
             line.label2.style.backgroundColor = label.originalColor || 'white';
-            //label.visibility = false;
             line.label2.collapsed = false;
-            //line.label2.hidden = false;
             showNextLabelsAndLines(line.label2);
         }
     });
@@ -350,9 +344,6 @@ function makeLabelDraggableAndEditable(label) {
         // Update label position
         labelPositions.forEach(pos => {
             if (pos.element === label) {
-                //here
-                // pos.left = label.offsetLeft;
-                // pos.top = label.offsetTop;
                 pos.element.style.left = `${label.offsetLeft}px`;
                 pos.element.style.top = `${label.offsetTop}px`;
             }
@@ -623,9 +614,7 @@ function redrawLines() {
         ctx.moveTo(endX, endY);
         ctx.strokeStyle = 'blue';
         ctx.lineTo(endX - headLength * Math.cos(angle - Math.PI / 6), endY - headLength * Math.sin(angle - Math.PI / 6));
-        //ctx.stroke();
         ctx.lineTo(endX - headLength * Math.cos(angle + Math.PI / 6), endY - headLength * Math.sin(angle + Math.PI / 6));
-        //ctx.lineTo(x2, y2);
         ctx.closePath();
         ctx.fillStyle = 'blue'; // Fill color for the arrowhead
         ctx.fill();
@@ -694,8 +683,6 @@ function loadFromJSON(data) {
             document.body.appendChild(newLabel);
             labelPositions.push({
                 element: newLabel,
-                // left: labelData.left,
-                // top: labelData.top,
                 width: newLabel.offsetWidth,
                 height: newLabel.offsetHeight,
                 color: labelData.color,
