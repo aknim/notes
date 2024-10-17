@@ -156,7 +156,7 @@ document.addEventListener('dblclick', function(e) {
     const newLabel = document.createElement('div');
     newLabel.classList.add('floating-label', 'editable');
     newLabel.contentEditable = true;
-    newLabel.innerText = 'New Label';
+    newLabel.textContent = 'New Label';
     newLabel.style.left = `${e.clientX}px`;
     newLabel.style.top = `${e.clientY}px`;
 
@@ -361,7 +361,7 @@ function makeLabelDraggableAndEditable(label) {
     label.addEventListener('blur', function() {
         label.contentEditable = false; // Lock the label after editing
         label.classList.remove('editable');
-        if(label.title) document.title = label.innerText;
+        if(label.title) document.title = label.textContent;
     });
 
     // Handle Shift+Click for line drawing
@@ -629,7 +629,8 @@ function redrawLines() {
 
 function saveState() {
     const labelsData = labelPositions.map(labelPos => ({
-        text: labelPos.element.textContent.trim(),  // Get only the innerText (label content)
+        //text: labelPos.element.textContent.trim(),  // Get only the innerText (label content)
+        html: labelPos.element.innerHTML.trim(),
         left: getValFromPx(labelPos.element.style.left),                      // Get the x (left) position of the label
         top: getValFromPx(labelPos.element.style.top),                        // Get the y (top) position of the label
         color: labelPos.color || "#3498db",        // Include color (default if not set)
@@ -674,7 +675,8 @@ function loadFromJSON(data) {
         data.labels.forEach(labelData => {
             const newLabel = document.createElement('div');
             newLabel.classList.add('floating-label');
-            newLabel.innerText = labelData.text;
+            //newLabel.textContent = labelData.text;
+            newLabel.innerHTML = labelData.html?labelData.html:labelData.text;
             newLabel.style.left = `${labelData.left}px`;
             newLabel.style.top = `${labelData.top}px`;
             newLabel.style.color = labelData.color;
