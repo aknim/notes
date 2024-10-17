@@ -695,7 +695,7 @@ function loadFromJSON(data) {
                 collapsed: labelData.collapsed
             });
             //Set title
-            if (labelData.title) document.title = labelData.text;
+            if (labelData.title === true) document.title = newLabel.innerText;
 
             makeLabelDraggableAndEditable(newLabel);
         });
