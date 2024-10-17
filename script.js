@@ -654,6 +654,7 @@ function saveState() {
     }));
 
     const state = {
+        title: document.title,
         labels: labelsData,
         lines: linesData
     };
@@ -666,6 +667,10 @@ function loadFromJSON(data) {
     // Clear existing labels and lines
     clearAllLabelsAndLines();
     tmp = data;
+
+    //Set title
+    if (data.title) document.title = data.title;
+
     // Load labels
     if (data.labels) {
         data.labels.forEach(labelData => {
@@ -685,7 +690,7 @@ function loadFromJSON(data) {
                 element: newLabel,
                 width: newLabel.offsetWidth,
                 height: newLabel.offsetHeight,
-                color: labelData.color,
+                color: labelData.color, //? redundant and not necessary?
                 collapsed: labelData.collapsed
             });
 
