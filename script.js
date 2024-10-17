@@ -361,6 +361,7 @@ function makeLabelDraggableAndEditable(label) {
     label.addEventListener('blur', function() {
         label.contentEditable = false; // Lock the label after editing
         label.classList.remove('editable');
+        if(label.title) document.title = label.innerText;
     });
 
     // Handle Shift+Click for line drawing
@@ -634,7 +635,8 @@ function saveState() {
         color: labelPos.color || "#3498db",        // Include color (default if not set)
         collpased: labelPos.element.collapsed,
         visibility: labelPos.element.style.visibility,
-        backgroundColor: labelPos.element.style.backgroundColor
+        backgroundColor: labelPos.element.style.backgroundColor,
+        title: labelPos.element.title
     }));
 
     const linesData = lines.map(line => ({
@@ -654,7 +656,6 @@ function saveState() {
     }));
 
     const state = {
-        title: document.title,
         labels: labelsData,
         lines: linesData
     };
@@ -668,9 +669,6 @@ function loadFromJSON(data) {
     clearAllLabelsAndLines();
     tmp = data;
 
-    //Set title
-    if (data.title) document.title = data.title;
-
     // Load labels
     if (data.labels) {
         data.labels.forEach(labelData => {
@@ -683,6 +681,7 @@ function loadFromJSON(data) {
             newLabel.style.borderColor = labelData.color;
             newLabel.style.visibility = labelData.visibility?labelData.visibility:'visible';
             newLabel.style.backgroundColor = labelData.backgroundColor;
+            newLabel.title = labelData.title;
 
             
             document.body.appendChild(newLabel);
@@ -693,6 +692,8 @@ function loadFromJSON(data) {
                 color: labelData.color, //? redundant and not necessary?
                 collapsed: labelData.collapsed
             });
+            //Set title
+            if (labelData.title) document.title = labelData.text;
 
             makeLabelDraggableAndEditable(newLabel);
         });
