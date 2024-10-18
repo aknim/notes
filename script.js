@@ -352,16 +352,16 @@ function makeLabelDraggableAndEditable(label) {
 
             // Prevent overlapping
             if (!isOverlapping(label, newLeft, newTop)) {
-                // label.style.left = `${newLeft}px`;
-                // label.style.top = `${newTop}px`;
-
-                
-               const nextLabelsList = findNextLabels(label);
-               diffX = newLeft - getValFromPx(label.style.left);
-               diffY = newTop - getValFromPx(label.style.top);
-
-               updateNextLabels(nextLabelsList, diffX, diffY);
-
+                if(label.collapsed){
+                    const nextLabelsList = findNextLabels(label);
+                    diffX = newLeft - getValFromPx(label.style.left);
+                    diffY = newTop - getValFromPx(label.style.top);
+                    updateNextLabels(nextLabelsList, diffX, diffY);
+                }
+                else{
+                    label.style.left = `${newLeft}px`;
+                    label.style.top = `${newTop}px`;
+                }
                redrawLines(); // Update lines when label is dragged
             }
         }
@@ -726,7 +726,7 @@ function loadFromJSON(data) {
                 collapsed: labelData.collapsed
             });
             //Set title
-            if (labelData.title === true) document.title = newLabel.innerText;
+            if (labelData.title === true || labelData.title==="true") document.title = newLabel.innerText;
 
             makeLabelDraggableAndEditable(newLabel);
         });
