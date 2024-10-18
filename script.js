@@ -298,6 +298,29 @@ function rgbToHex(rgb) {
 
 
 
+function updateNextLabels(labelsList, diffX, diffY){
+    labelsList.forEach(label => {
+        label.style.left = getValFromPx(label.style.left) + diffX + "px";
+        label.style.top = getValFromPx(label.style.top) + diffY + "px";
+    });
+}
+
+function findNextLabels(label){
+    startingLabels = [label];
+    nextLabels = [];
+
+    while(startingLabels.length !==0 ){
+        currLabel = startingLabels.shift();
+        nextLabels.push(currLabel);
+        lines.forEach(line => {
+            if(line.label1 === currLabel){
+                startingLabels.push(line.label2);
+            }
+        })
+    }
+    return nextLabels;
+
+}
 
 // Make labels draggable and editable on double-click
 function makeLabelDraggableAndEditable(label) {
@@ -329,9 +352,17 @@ function makeLabelDraggableAndEditable(label) {
 
             // Prevent overlapping
             if (!isOverlapping(label, newLeft, newTop)) {
-                label.style.left = `${newLeft}px`;
-                label.style.top = `${newTop}px`;
-                redrawLines(); // Update lines when label is dragged
+                // label.style.left = `${newLeft}px`;
+                // label.style.top = `${newTop}px`;
+
+                
+               const nextLabelsList = findNextLabels(label);
+               diffX = newLeft - getValFromPx(label.style.left);
+               diffY = newTop - getValFromPx(label.style.top);
+
+               updateNextLabels(nextLabelsList, diffX, diffY);
+
+               redrawLines(); // Update lines when label is dragged
             }
         }
     });
