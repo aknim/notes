@@ -88,11 +88,24 @@ document.addEventListener('keydown', function(e) {
         // Ctrl + N or Cmd + N: Open JSON input to create labels and lines
         if (e.key === 'n') {
             e.preventDefault();  // Prevent default browser new document action
-            const inputJSON = prompt("Enter the JSON data to create labels and lines:");
+            const inputJSON = prompt("Enter the JSON data to CREATE labels and lines:");
             if (inputJSON) {
                 try {
                     const parsedData = JSON.parse(inputJSON);
                     loadFromJSON(parsedData);
+                } catch (error) {
+                    alert("Invalid JSON format. Please try again.");
+                }
+            }
+        }
+
+        if (e.key === 'p') {
+            e.preventDefault();
+            const inputJSON = prompt("Enter the JSON data to ADD labels and lines:");
+            if (inputJSON) {
+                try {
+                    const parsedData = JSON.parse(inputJSON);
+                    addNewFromJSON(parsedData);
                 } catch (error) {
                     alert("Invalid JSON format. Please try again.");
                 }
@@ -185,6 +198,97 @@ document.addEventListener('keydown', function(e) {
         }
     } 
 });
+
+document.addEventListener('keydown', function(e) {
+    if (e.shiftKey && e.key.toLowerCase() === 's') {
+        if (selectedLabel) {
+            saveCurrAndNextLabelsAndLines(selectedLabel); // save the selected label and next labels, including lines
+        }
+    }
+});
+
+function saveCurrAndNextLabelsAndLines(label){
+    linkedLabelsAndLinesList = collectLinkedLabelsAndLines(label);
+    collectedLabels = linkedLabelsAndLinesList.linkedLabelsList;
+    collectedLines = linkedLabelsAndLinesList.linesList;
+
+
+    filteredLabelPositions = labelPositions.filter(item1 =>
+        collectedLabels.some(item2 => item1.element.innerHTML === item2.innerHTML)
+    );
+
+    savingLabelsData = filteredLabelPositions.map(labelPos => ({
+        html: labelPos.element.innerHTML.trim(),
+        left: getValFromPx(labelPos.element.style.left),
+        top: getValFromPx(labelPos.element.style.top),
+        color: labelPos.color || "#3498db",
+        collapsed: labelPos.element.collapsed,
+        visibility: labelPos.element.style.visibility,
+        backgroundColor: labelPos.element.style.backgroundColor,
+        wasTitle: labelPos.element.title
+    }));
+
+    savingLinesData = collectedLines.map(line => ({
+        from: line.label1.textContent.trim(), 
+        to: line.label2.textContent.trim(),
+        fromPosition: {
+            x: line.x1,
+            y: line.y1
+        },
+        toPosition: {
+            x: line.x2,
+            y: line.y2
+        },
+        hidden: line.hidden,
+        color: line.color || "#e74c3c",
+        width: line.width || 2
+    }));
+
+    collectedLabelsAndLinesState = {
+        labels: savingLabelsData,
+        lines:savingLinesData
+    };
+
+    console.log(JSON.stringify(collectedLabelsAndLinesState, null, 2));
+}
+
+function addNewFromJSON(data){
+    if (data.labels) {
+        data.labels.forEach(labelData => {
+            newLabel = document.createElement('div');
+            newLabel.classList.add('floating-label');
+            newLabel.innerHTML = labelData.html?labelData.html:labelData.text;
+            newLabel.style.left = `${labelData.left}px`;
+            newLabel.style.top = `${labelData.top}px`;
+            newLabel.style.color = labelData.color;
+            newLabel.style.borderColor = labelData.color;
+            newLabel.style.visibility = labelData.visibility?labelData.visibility:"visible";
+            newLabel.style.backgroundColor = labelData.backgroundColor;
+            newLabel.wasTitle = labelData.wasTitle; // maybe also add labelData.title so that can load even from saveState not just saveCollectedLabels
+
+            document.body.appendChild(newLabel);
+            labelPositions.push({
+                element: newLabel,
+                width: newLabel.offsetWidth,
+                height: newLabel.offsetHeight,
+                color: labelData.color,
+                collapsed: labelData.collapsed
+            });
+
+            makeLabelDraggableAndEditable(newLabel);
+        });
+    }
+
+    if (data.lines) {
+        data.lines.forEach(lineData => {
+            const label1 = findLabelByText(lineData.from);
+            const label2 = findLabelByText(lineData.to);
+            if (label1 && label2) {
+                drawLineBetweenLabels(label1, label2, lineData.color, lineData.width, lineData.hidden);
+            }
+        })
+    }
+}
 
 function toggleCollapse(label) {
     label.collapsed = !label.collapsed;
@@ -298,29 +402,32 @@ function rgbToHex(rgb) {
 
 
 
-function updateNextLabels(labelsList, diffX, diffY){
+function updateLinkedLabels(labelsList, diffX, diffY){
     labelsList.forEach(label => {
         label.style.left = getValFromPx(label.style.left) + diffX + "px";
         label.style.top = getValFromPx(label.style.top) + diffY + "px";
     });
 }
 
-function findNextLabels(label){
+function collectLinkedLabelsAndLines(label){
     startingLabels = [label];
-    nextLabels = [];
+    linkedLabelsList = [];
+    linesList = [];
 
     while(startingLabels.length !==0 ){
         currLabel = startingLabels.shift();
-        nextLabels.push(currLabel);
+        linkedLabelsList.push(currLabel);
         lines.forEach(line => {
             if(line.label1 === currLabel){
                 startingLabels.push(line.label2);
+                linesList.push(line);
             }
         })
     }
-    return nextLabels;
-
+    collectedLabelsAndLinesList = {linkedLabelsList, linesList};
+    return collectedLabelsAndLinesList;
 }
+
 
 // Make labels draggable and editable on double-click
 function makeLabelDraggableAndEditable(label) {
@@ -353,10 +460,10 @@ function makeLabelDraggableAndEditable(label) {
             // Prevent overlapping
             if (!isOverlapping(label, newLeft, newTop)) {
                 if(label.collapsed){
-                    const nextLabelsList = findNextLabels(label);
+                    const linkedLabelsList = collectLinkedLabelsAndLines(label).linkedLabelsList;
                     diffX = newLeft - getValFromPx(label.style.left);
                     diffY = newTop - getValFromPx(label.style.top);
-                    updateNextLabels(nextLabelsList, diffX, diffY);
+                    updateLinkedLabels(linkedLabelsList, diffX, diffY);
                 }
                 else{
                     label.style.left = `${newLeft}px`;
