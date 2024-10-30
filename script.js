@@ -6,6 +6,12 @@ let labelPositions = [];
 let selectedLabel = null; // Keep track of the label to apply the color
 let selectedLine = null;
 
+// For Saving To Browser
+let lastSaveTimeLabel = document.getElementById('lastSaveTime');
+console.log(lastSaveTimeLabel.innerText);
+let currId = "notes-"+new Date();
+console.log("currId: "+currId);
+
 // For line drawing
 let isShiftPressed = false;
 let firstLabel = null;
@@ -75,7 +81,7 @@ document.addEventListener('keydown', (event) => {
     }
  });
 
- // Detect Cmd + N or Ctrl + N to open prompt for JSON input
+// Detect Cmd + N or Ctrl + N to open prompt for JSON input
 // Combined event listener for both save (Ctrl/Cmd + S) and new (Ctrl/Cmd + N)
 document.addEventListener('keydown', function(e) {
     if (e.ctrlKey || e.metaKey) {
@@ -186,10 +192,6 @@ document.addEventListener('dblclick', function(e) {
     makeLabelDraggableAndEditable(newLabel);
 });
 
-
-
-// #endregion
-
 document.addEventListener('keydown', function(e) {
     // Check if it's Cmd + Shift + 'c' 
     if (e.shiftKey && e.key.toLowerCase() === 'c') {
@@ -207,10 +209,12 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// #endregion
+
 function saveCurrAndNextLabelsAndLines(label){
-    linkedLabelsAndLinesList = collectLinkedLabelsAndLines(label);
-    collectedLabels = linkedLabelsAndLinesList.linkedLabelsList;
-    collectedLines = linkedLabelsAndLinesList.linesList;
+    let linkedLabelsAndLinesList = collectLinkedLabelsAndLines(label);
+    let collectedLabels = linkedLabelsAndLinesList.linkedLabelsList;
+    let collectedLines = linkedLabelsAndLinesList.linesList;
 
 
     filteredLabelPositions = labelPositions.filter(item1 =>
@@ -244,7 +248,7 @@ function saveCurrAndNextLabelsAndLines(label){
         width: line.width || 2
     }));
 
-    collectedLabelsAndLinesState = {
+    const collectedLabelsAndLinesState = {
         labels: savingLabelsData,
         lines:savingLinesData
     };
@@ -765,7 +769,7 @@ function redrawLines() {
 
 // #region SAVE & LOAD 
 
-function saveState() {
+function getState(){
     const labelsData = labelPositions.map(labelPos => ({
         //text: labelPos.element.textContent.trim(),  // Get only the innerText (label content)
         html: labelPos.element.innerHTML.trim(),
@@ -798,7 +802,35 @@ function saveState() {
         labels: labelsData,
         lines: linesData
     };
+    return state;
+}
 
+function downloadDataAsFile(){
+    let state = getState();
+    state.title = document.title;
+    state.time = ""+new Date();
+
+    const blob = new Blob([JSON.stringify(state), null, 2], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'autosave.json';
+    link.click();
+
+    console.log('Downloaded saved data as file.');
+}
+
+function autoSave(){
+    let state = getState();
+    state.title = document.title;
+    state.time = ""+new Date();
+
+    localStorage.setItem(currId, JSON.stringify(state));
+    lastSaveTimeLabel.innerText = "Last locally saved: "+state.time;
+}
+
+
+function saveState() {
+    const state = getState();
     console.log(JSON.stringify(state, null, 2));  // Log the clean state as a formatted JSON string
 }
 
@@ -917,3 +949,5 @@ function pointToLineDistance(px, py, x1, y1, x2, y2) {
 }
 
 // #endregion
+
+setInterval(autoSave, 10000);
