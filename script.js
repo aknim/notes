@@ -326,7 +326,7 @@ function toggleCollapse(label) {
 // Recursively hide next labels and lines
 function hideNextLabelsAndLines(label) {
     lines.forEach(line => {
-        if (line.label1 === label) {
+        if (line.label1 === label && line.hidden !==true) {
             line.hidden = true; 
             line.label2.style.visibility = 'hidden';
             line.label2.collapsed = true; 
@@ -338,7 +338,7 @@ function hideNextLabelsAndLines(label) {
 // Recursively show next labels and lines
 function showNextLabelsAndLines(label) {
     lines.forEach(line => {
-        if (line.label1 === label) {
+        if (line.label1 === label && line.hidden !== false) {
             line.hidden = false;
             line.label2.style.visibility = 'visible';
             line.label2.style.backgroundColor = label.originalColor || 'white';
