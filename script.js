@@ -209,6 +209,10 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// Add event listener to the button to show local storage
+document.getElementById('show-localstorage').addEventListener('click', showLocalStorage);
+
+
 // #endregion
 
 function saveCurrAndNextLabelsAndLines(label){
@@ -817,6 +821,49 @@ function downloadDataAsFile(){
     link.click();
 
     console.log('Downloaded saved data as file.');
+}
+
+function showLocalStorage() {
+    const container = document.getElementById('localstorage-contents');
+    container.innerHTML = ''; // Clear previous contents
+
+    // Create a list to show each localStorage item
+    const ul = document.createElement('ul');
+
+    // Loop through localStorage items
+    for (let i=0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+
+        const li = document.createElement('li');
+        // li.textContent = `${key}: ${value}`;
+        
+        // Create a delete button for each item
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Del';
+        deleteButton.onclick = () => {
+            localStorage.removeItem(key);
+            showLocalStorage(); // Refresh the displayed list
+        };
+        li.appendChild(deleteButton);
+        li.appendChild(document.createTextNode(`${key}: ${value}`));
+        
+
+        
+        ul.appendChild(li);
+    }
+
+    // Add a button to clear all localStorage items
+    const clearButton = document.createElement('button');
+    clearButton.textContent = 'Clear All';
+    clearButton.onclick = () => {
+        localStorage.clear();
+        showLocalStorage(); // Refresh the displayed list
+    }
+
+    container.appendChild(ul);
+    container.appendChild(clearButton);
+    container.style.display = 'block'; // Show the container
 }
 
 function autoSave(){
