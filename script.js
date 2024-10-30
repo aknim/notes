@@ -210,8 +210,20 @@ document.addEventListener('keydown', function(e) {
 });
 
 // Add event listener to the button to show local storage
-document.getElementById('show-localstorage').addEventListener('click', showLocalStorage);
+document.getElementById('show-localstorage').addEventListener('click', showLocalStorageModal);
 
+// Close the modal when the close button is clicked
+document.getElementById('close-modal').addEventListener('click', () => {
+    document.getElementById('localstorage-modal').style.display = 'none';
+});
+
+// Close the modal when the user clicks outside of the modal content
+window.onclick = function(event) {
+    const modal = document.getElementById('localstorage-modal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+};
 
 // #endregion
 
@@ -823,7 +835,64 @@ function downloadDataAsFile(){
     console.log('Downloaded saved data as file.');
 }
 
-function showLocalStorage() {
+
+function showLocalStorageModal(){
+    console.log("called");
+    const modal = document.getElementById('localstorage-modal');
+    const container = document.getElementById('localstorage-contents');
+    container.innerHTML = ''; // Clear previous contents
+
+    // Create a list to show each localStorage item
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+
+        // Create a container for each item
+        const itemDiv = document.createElement('div');
+        itemDiv.style.marginBottom = '10px';
+
+        // Show ID and title
+        const title = document.createElement('h4');
+        title.textContent = key; // Use key as title
+        itemDiv.appendChild(title);
+
+        // Create a button to toggle visibility
+        const toggleButton = document.createElement('button');
+        toggleButton.textContent = 'Show More';
+        let isExpanded = false; // Track the state of the expansion
+        const valueDiv = document.createElement('div');
+        valueDiv.style.display = 'none'; // Hide by default
+        valueDiv.textContent = value;
+
+        toggleButton.onclick = () => {
+            if (isExpanded) {
+                valueDiv.style.display = 'none';
+                toggleButton.textContent = 'Show More';
+            } else {
+                valueDiv.style.display = 'block';
+                toggleButton.textContnt = 'Show Less';
+            }
+            isExpanded = !isExpanded; // Toggle the state
+        };
+
+        // Create a delete button for each item
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.onclick = () => {
+            localStorage.removeItem(key);
+            showLocalStorageModal(); // Refresh the displayed list
+        };
+
+        // Append elements to itemDiv
+        itemDiv.appendChild(toggleButton);
+        itemDiv.appendChild(deleteButton);
+        itemDiv.appendChild(valueDiv);
+        container.appendChild(itemDiv);
+    }
+
+    modal.style.display = 'flex'; // Show the modal
+}
+function showLocalStorageUgly() {
     const container = document.getElementById('localstorage-contents');
     container.innerHTML = ''; // Clear previous contents
 

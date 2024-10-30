@@ -74,6 +74,28 @@ button:hover {
     z-index: 10; /* Keep the controls above the labels and canvas */
 }
 
+#localstorage-modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    width: 80%;
+    max-width: 500px;
+}
+
 #colorPicker {
     width: 40px;
     height: 40px;

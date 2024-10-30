@@ -19,7 +19,16 @@
         <button id="flipButton"> Flip Line</button>
         <div id="lastSaveTime"> Last locally saved: never </div>
         <button id="show-localstorage">Show Local Storage</button>
-        <div id="localstorage-contents" style="display: none;"></div>
+        <!-- <div id="localstorage-contents" style="display: none;"></div> -->
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="localstorage-modal" style="display:none;">
+        <div id="model-content">
+            <span id="close-modal" style="cursor:pointer;">&times; Close</span>
+            <h2> Local Storage Items</h2>
+            <div id="localstorage-contents"></div>
+        </div>
     </div>
 
     <script src="script.js"></script>
