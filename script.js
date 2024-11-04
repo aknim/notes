@@ -6,6 +6,10 @@ let labelPositions = [];
 let selectedLabel = null; // Keep track of the label to apply the color
 let selectedLine = null;
 
+// Unde & Redo
+let undoStack = [];
+let redoStack = [];
+
 // For Saving To Browser
 let lastSaveTimeLabel = document.getElementById('lastSaveTime');
 console.log(lastSaveTimeLabel.innerText);
@@ -182,14 +186,18 @@ document.addEventListener('dblclick', function(e) {
     // Add to the document and make it draggable and editable
     document.body.appendChild(newLabel);
 
-    labelPositions.push({
+    let item = {
         element: newLabel,
-        // left: e.clientX,
-        // top: e.clientY,
         width: newLabel.offsetWidth,
         height: newLabel.offsetHeight
-    });
+    };
+    labelPositions.push(item);
     makeLabelDraggableAndEditable(newLabel);
+    let action = {
+        type: "new label",
+        theLabel: item
+    };
+    undoStack.push(action);
 });
 
 document.addEventListener('keydown', function(e) {
@@ -225,7 +233,119 @@ window.onclick = function(event) {
     }
 };
 
+// Undo & Redo : Cmd + Z / Ctrl + Z Or Cmd + Shift + Z / Ctrl +Shift + Z
+document.addEventListener("keydown", (event) => {
+    if((event.ctrlKey || event.metaKey) && event.key === "z") {
+        if (event.shiftKey) {
+            redo();
+        } else {
+            undo();
+        }
+    }
+})
+
 // #endregion
+
+function undo(){
+    console.log("called undo");
+    if(undoStack.length === 0) return;
+    const action = undoStack.pop();
+    redoStack.push(action);
+    let thisLine, thisLabel, thisLines;
+
+    switch(action.type) {
+        case "new label" :
+            thisLabel = action.theLabel.element;
+            // remove from document
+            thisLabel.remove();
+            labelPositions = labelPositions.filter(pos => pos.element !== thisLabel);
+            break;
+        case "new line":
+            thisLine = action.theLine;
+            let index = lines.findIndex(e => e === thisLine);
+            lines.splice(index, 1);
+            selectedLine = null; 
+            redrawLines();
+            break;
+        case "new from JSON" :
+            const thisLabels = action.theLabels;
+            console.log("> >"+thisLabels);
+            thisLabels.forEach(thisLabel => {
+                console.log(">>"+thisLabel.element);
+                thisLabel.element.remove();
+                labelPositions = labelPositions.filter(pos => pos.element !== thisLabel.element);
+            })
+            thisLines = action.theLines;
+            thisLines.forEach(thisLine => {
+                let index = lines.findIndex(e => e === thisLine);
+                lines.splice(index, 1);
+                selectedLine = null; 
+                redrawLines();
+            })
+            break;
+        case "delete label":
+            thisLabel = action.theLabel.element;
+            document.body.appendChild(thisLabel);
+            labelPositions.push(action.theLabel);
+
+            thisLines = action.theLines;
+            thisLines.forEach(thisLine => {
+                drawLineBetweenLabels(thisLine.label1, thisLine.label2, thisLine.color, thisLine.width, thisLine.hidden);
+            })
+            break;
+        case "delete line":
+            thisLine = action.theLine;
+            drawLineBetweenLabels(thisLine.label1, thisLine.label2, thisLine.color, thisLine.width, thisLine.hidden);
+            break;
+    }
+}
+
+function redo() {
+    console.log("called redo");
+    if(redoStack.length === 0) return;
+    const action = redoStack.pop();
+    undoStack.push(action); //
+    let thisLine, thisLabel, thisLines;
+
+    switch(action.type) {
+        case "new label" :
+            thisLabel = action.theLabel.element;
+            document.body.appendChild(thisLabel);
+            labelPositions.push(action.theLabel);
+            break;
+        case "new line" :
+            thisLine = action.theLine;
+            drawLineBetweenLabels(thisLine.label1, thisLine.label2, thisLine.color, thisLine.width, thisLine.hidden);
+            break;
+        case "new from JSON" :
+            const thisLabels = action.theLabels;
+            thisLabels.forEach(thisLabel => {
+                document.body.appendChild(thisLabel.element);
+                labelPositions.push(thisLabel); 
+            })
+            const thisLines = action.theLines;
+            thisLines.forEach(thisLine => {
+                drawLineBetweenLabels(thisLine.label1, thisLine.label2, thisLine.color, thisLine.width, thisLine.hidden);
+            })
+            break;
+        case "delete label":
+            thisLabel = action.theLabel.element;
+            thisLabel.remove();
+            labelPositions = labelPositions.filter(pos => pos.element !== thisLabel);
+            thisLines = action.theLines;
+            lines = lines.filter(line => !thisLines.includes(line));
+            redrawLines();
+            selectedLabel = null;
+            break;
+        case "delete line":
+            thisLine = action.theLine;
+            let index = lines.findIndex(e => e === selectedLine);
+            lines.splice(index, 1);
+            selectedLine = null;
+            redrawLines();
+            break;
+    }
+}
 
 function saveCurrAndNextLabelsAndLines(label){
     let linkedLabelsAndLinesList = collectLinkedLabelsAndLines(label);
@@ -273,6 +393,11 @@ function saveCurrAndNextLabelsAndLines(label){
 }
 
 function addNewFromJSON(data){
+    let itemLabels = [];
+    let itemLines = [];
+    let action = {
+        type: "new from JSON"
+    };
     if (data.labels) {
         data.labels.forEach(labelData => {
             newLabel = document.createElement('div');
@@ -287,16 +412,18 @@ function addNewFromJSON(data){
             newLabel.wasTitle = labelData.wasTitle; // maybe also add labelData.title so that can load even from saveState not just saveCollectedLabels
 
             document.body.appendChild(newLabel);
-            labelPositions.push({
+            let item = {
                 element: newLabel,
                 width: newLabel.offsetWidth,
                 height: newLabel.offsetHeight,
                 color: labelData.color,
                 collapsed: labelData.collapsed
-            });
-
+            };
+            labelPositions.push(item);
             makeLabelDraggableAndEditable(newLabel);
+            itemLabels.push(item);
         });
+        action.theLabels = itemLabels; 
     }
 
     if (data.lines) {
@@ -304,10 +431,14 @@ function addNewFromJSON(data){
             const label1 = findLabelByText(lineData.from);
             const label2 = findLabelByText(lineData.to);
             if (label1 && label2) {
-                drawLineBetweenLabels(label1, label2, lineData.color, lineData.width, lineData.hidden);
+                let item = drawLineBetweenLabels(label1, label2, lineData.color, lineData.width, lineData.hidden);
+                itemLines.push(item);
             }
         })
     }
+    action.theLines = itemLines;
+    console.log(action);
+    undoStack.push(action);
 }
 
 function toggleCollapse(label) {
@@ -528,8 +659,15 @@ function makeLabelDraggableAndEditable(label) {
             if (!firstLabel) {
                 firstLabel = label; // Set the first label
             } else {
-                drawLineBetweenLabels(firstLabel, label); // Draw a line between first and second labels
+                let item =  drawLineBetweenLabels(firstLabel, label); // Draw a line between first and second labels
                 firstLabel = null; // Reset the first label
+                let action = {
+                    type: "new line",
+                    theLine: item
+                };
+                console.log(action);
+                undoStack.push(action);
+                
             }
         } else {
             selectedLabel = label; //Store the clicked label for color application
@@ -602,6 +740,11 @@ function deleteSelectedLine(){
     if(selectedLine !== null){
         let index = lines.findIndex(e => e === selectedLine);
         lines.splice(index, 1);
+        let action = {
+            type: "delete line",
+            theLine: selectedLine
+        };
+        undoStack.push(action);
         selectedLine = null; 
         redrawLines();
     }
@@ -610,6 +753,11 @@ function deleteSelectedLine(){
 // Function to delete the selected label
 function deleteSelectedLabel() {
     if (selectedLabel) {
+        let action = {
+            type: "delete label",
+            theLabel: labelPositions.find(pos => pos.element === selectedLabel)
+        };
+        let deletedLines = [];
         // Remove the label from the DOM
         selectedLabel.remove(); 
 
@@ -620,6 +768,7 @@ function deleteSelectedLabel() {
         lines = lines.filter(line => {
 
             if (line.label1 === selectedLabel || line.label2 === selectedLabel) {
+                theLines.push(line);
                 return false; // Remove lines connected to the deleted label
             }
             return true;
@@ -627,6 +776,8 @@ function deleteSelectedLabel() {
         redrawLines(); // Redraw lines after deletion
 
         selectedLabel = null; // Clear the selection
+        action.theLines = deletedLines;
+        undoStack.push(action);
     }
 }
 
@@ -679,105 +830,108 @@ function drawLineBetweenLabels(label1, label2, lineColor, lineWidth, lineHidden 
         width: lineWidth?lineWidth:2,
         hidden: lineHidden,
     };
+
     selectLine(l);
     lines.push(l);
-
     redrawLines();
+    return l;
 }
 
 
+function redrawLine(line){
+    if (line.hidden) return; 
+    const label1Rect = line.label1.getBoundingClientRect();
+    const label2Rect = line.label2.getBoundingClientRect();
+
+    // Get center points of both labels
+    const label1Center = getLabelCenter(label1Rect);
+    const label2Center = getLabelCenter(label2Rect);
+
+    // Calculate the differences in positions
+    const deltaX = label2Center.x - label1Center.x;
+    const deltaY = label2Center.y - label1Center.y;
+
+    // Determine from which side of label1 to start and which side of label2 to end
+    let startX, startY, endX, endY;
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // The labels are mostly horizontally aligned
+        if (deltaX > 0) {
+            // Label 2 is to the right of Label 1
+            startX = label1Rect.right;
+            startY = label1Center.y;
+            endX = label2Rect.left;
+            endY = label2Center.y;
+        } else {
+            // Label 2 is to the left of Label 1
+            startX = label1Rect.left;
+            startY = label1Center.y;
+            endX = label2Rect.right;
+            endY = label2Center.y;
+        }
+    } else {
+        // The labels are mostly vertically aligned
+        if (deltaY > 0) {
+            // Label 2 is below Label 1
+            startX = label1Center.x;
+            startY = label1Rect.bottom;
+            endX = label2Center.x;
+            endY = label2Rect.top;
+        } else {
+            // Label 2 is above Label 1
+            startX = label1Center.x;
+            startY = label1Rect.top;
+            endX = label2Center.x;
+            endY = label2Rect.bottom;
+        }
+    }
+
+    
+
+    if(line===selectedLine){
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';  // Line color (red)
+        ctx.lineWidth = 8;
+        ctx.stroke();
+        ctx.closePath();
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, endY);
+    ctx.strokeStyle = line.color?line.color:'#e74c3c';  // Line color (red)
+    ctx.lineWidth = 2;//line.width;
+    ctx.stroke();
+    ctx.closePath();
+
+    // Update the stored positions for the line
+    line.x1 = startX;
+    line.y1 = startY;
+    line.x2 = endX;
+    line.y2 = endY;
+
+    // Draw arrowhead
+    const headLength = 30; // Length of arrow head
+    const angle = Math.atan2(endY - startY, endX - startX); // Calculate angle of the line
+    ctx.beginPath();
+    ctx.moveTo(endX, endY);
+    ctx.strokeStyle = 'blue';
+    ctx.lineTo(endX - headLength * Math.cos(angle - Math.PI / 6), endY - headLength * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(endX - headLength * Math.cos(angle + Math.PI / 6), endY - headLength * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fillStyle = 'blue'; // Fill color for the arrowhead
+    ctx.fill();
+    
+}
 // Function to clear and drawn all lines
 function redrawLines() {
     // Clear the canvas
     ctx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
 
     // Redraw each line
-    lines.forEach(line => {
-        if (line.hidden) return; 
-        const label1Rect = line.label1.getBoundingClientRect();
-        const label2Rect = line.label2.getBoundingClientRect();
-
-        // Get center points of both labels
-        const label1Center = getLabelCenter(label1Rect);
-        const label2Center = getLabelCenter(label2Rect);
-
-        // Calculate the differences in positions
-        const deltaX = label2Center.x - label1Center.x;
-        const deltaY = label2Center.y - label1Center.y;
-
-        // Determine from which side of label1 to start and which side of label2 to end
-        let startX, startY, endX, endY;
-
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-            // The labels are mostly horizontally aligned
-            if (deltaX > 0) {
-                // Label 2 is to the right of Label 1
-                startX = label1Rect.right;
-                startY = label1Center.y;
-                endX = label2Rect.left;
-                endY = label2Center.y;
-            } else {
-                // Label 2 is to the left of Label 1
-                startX = label1Rect.left;
-                startY = label1Center.y;
-                endX = label2Rect.right;
-                endY = label2Center.y;
-            }
-        } else {
-            // The labels are mostly vertically aligned
-            if (deltaY > 0) {
-                // Label 2 is below Label 1
-                startX = label1Center.x;
-                startY = label1Rect.bottom;
-                endX = label2Center.x;
-                endY = label2Rect.top;
-            } else {
-                // Label 2 is above Label 1
-                startX = label1Center.x;
-                startY = label1Rect.top;
-                endX = label2Center.x;
-                endY = label2Rect.bottom;
-            }
-        }
-
-        
-
-        if(line===selectedLine){
-            ctx.beginPath();
-            ctx.moveTo(startX, startY);
-            ctx.lineTo(endX, endY);
-            ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';  // Line color (red)
-            ctx.lineWidth = 8;
-            ctx.stroke();
-            ctx.closePath();
-        }
-
-        ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
-        ctx.strokeStyle = line.color?line.color:'#e74c3c';  // Line color (red)
-        ctx.lineWidth = 2;//line.width;
-        ctx.stroke();
-        ctx.closePath();
-
-        // Update the stored positions for the line
-        line.x1 = startX;
-        line.y1 = startY;
-        line.x2 = endX;
-        line.y2 = endY;
-
-        // Draw arrowhead
-        const headLength = 30; // Length of arrow head
-        const angle = Math.atan2(endY - startY, endX - startX); // Calculate angle of the line
-        ctx.beginPath();
-        ctx.moveTo(endX, endY);
-        ctx.strokeStyle = 'blue';
-        ctx.lineTo(endX - headLength * Math.cos(angle - Math.PI / 6), endY - headLength * Math.sin(angle - Math.PI / 6));
-        ctx.lineTo(endX - headLength * Math.cos(angle + Math.PI / 6), endY - headLength * Math.sin(angle + Math.PI / 6));
-        ctx.closePath();
-        ctx.fillStyle = 'blue'; // Fill color for the arrowhead
-        ctx.fill();
-    });
+    lines.forEach(line =>redrawLine(line));
 }
 
 
@@ -831,8 +985,6 @@ function downloadDataAsFile(){
     link.href = URL.createObjectURL(blob);
     link.download = 'autosave.json';
     link.click();
-
-    console.log('Downloaded saved data as file.');
 }
 
 
