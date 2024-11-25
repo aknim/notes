@@ -949,7 +949,7 @@ function getState(){
         collpased: labelPos.element.collapsed,
         visibility: labelPos.element.style.visibility,
         backgroundColor: labelPos.element.style.backgroundColor,
-        title: labelPos.element.title
+        title: labelPos.element.title=="true"?true:false
     }));
 
     const linesData = lines.map(line => ({
