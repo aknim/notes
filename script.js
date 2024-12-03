@@ -109,6 +109,37 @@ document.addEventListener('keydown', function(e) {
             }
         }
 
+        // Ctrl + O or Cmd + O: Open JSON via file input to create labels and lines
+        if (e.key === 'o') {
+            e.preventDefault();  // Prevent default browser new document action
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length === 0) {
+                    alert('No file selected!');
+                }
+                else{
+                    const file = fileInput.files[0];
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const inputJSON = event.target.result;
+                        if (inputJSON) {
+                            try {
+                                const parsedData = JSON.parse(inputJSON);
+                                loadFromJSON(parsedData);
+                            } catch (error) {
+                                alert("Invalid JSON format. Please try again.");
+                            }
+                        }
+                    }
+                    reader.readAsText(file);
+                }
+            })
+
+            fileInput.click();
+        }
+
         if (e.key === 'p') {
             e.preventDefault();
             const inputJSON = prompt("Enter the JSON data to ADD labels and lines:");
@@ -1099,6 +1130,13 @@ function autoSave(){
 
 function saveState() {
     const state = getState();
+    const fileData = JSON.stringify(state);
+    const blob = new Blob([fileData], { type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "file.json";
+    link.click();
     console.log(JSON.stringify(state, null, 2));  // Log the clean state as a formatted JSON string
 }
 
