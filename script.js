@@ -24,6 +24,8 @@ let ctx = lineCanvas.getContext('2d');
 let lines = []; // Store drawn lines between labels
 
 let hideLineMode = false;
+let bodyColor = '#f0f0f0';
+document.body.style.backgroundColor = bodyColor;
 
 let tmp = null;
 
@@ -210,7 +212,7 @@ document.addEventListener('keyup', function(e) {
     }
 });
 
-// Selecting Line
+// Selecting Line 
 document.addEventListener('click', function(e) {
     const clickX = e.clientX;
     const clickY = e.clientY; 
@@ -226,6 +228,17 @@ document.addEventListener('click', function(e) {
         }
     });
 });
+
+// Deselect Label (so selecting body)
+document.addEventListener('click', function(e) {
+    if (!e.target.classList.contains('floating-label')) {
+        if(selectedLabel){
+            selectedLabel.classList.remove('selected');
+            selectedLabel = null;
+        }
+        updateColorPickerFromBody();
+    }
+})
 
 // Double-click to create a new label
 document.addEventListener('dblclick', function(e) {
@@ -561,6 +574,7 @@ function changeSelectedItemColor(e){
     e.stopPropagation();
     if (selectedLabel) changeSelectedLabelColor();
     else if (selectedLine) changeSelectedLineColor();
+    else changeBodyColor();
 }
 
 function changeSelectedLabelColor(){
@@ -590,6 +604,12 @@ function changeSelectedLineColor(){
         redrawLines();
 }
 
+// Update the body color
+function changeBodyColor(){
+    bodyColor = colorPicker.value;
+    document.body.style.backgroundColor = bodyColor;
+}
+
 
 
 // Function to update color picker based on selected item's color
@@ -606,6 +626,14 @@ function updateColorPickerFromLine(line){
     
     const currentColor = line.color; // Color of line
     colorPicker.value = currentColor; // Update the color picker value to the line's color
+}
+
+// Function to update color picker based on body background color
+function updateColorPickerFromBody(){
+    const colorPicker = document.getElementById('colorPicker'); 
+    
+    const currentColor = document.body.style.backgroundColor; // Color of label
+    colorPicker.value = rgbToHex(currentColor); // Update the color picker value to the label's color
 }
 
 // Function to convert RGB color to HEX (if needed)
