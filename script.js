@@ -1161,7 +1161,7 @@ function autoSave(){
 
 function saveState() {
     const state = getState();
-    const fileData = JSON.stringify(state);
+    const fileData = JSON.stringify(state, null, 2);
     const blob = new Blob([fileData], { type: "application/json"});
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
