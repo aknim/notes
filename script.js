@@ -24,8 +24,8 @@ let ctx = lineCanvas.getContext('2d');
 let lines = []; // Store drawn lines between labels
 
 let hideLineMode = false;
-let bodyColor = '#f0f0f0';
-document.body.style.backgroundColor = bodyColor;
+let bodyBackgroundColor = '#f0f0f0';
+document.body.style.backgroundColor = bodyBackgroundColor;
 
 let tmp = null;
 
@@ -606,8 +606,8 @@ function changeSelectedLineColor(){
 
 // Update the body color
 function changeBodyColor(){
-    bodyColor = colorPicker.value;
-    document.body.style.backgroundColor = bodyColor;
+    bodyBackgroundColor = colorPicker.value;
+    document.body.style.backgroundColor = bodyBackgroundColor;
 }
 
 
@@ -1071,9 +1071,14 @@ function getState(){
         width: line.width || 2,
     }));
 
+    const propertiesData = {
+        bodyBackgroundColor: bodyBackgroundColor
+    };
+
     const state = {
         labels: labelsData,
-        lines: linesData
+        lines: linesData,
+        properties: propertiesData
     };
     return state;
 }
@@ -1258,6 +1263,12 @@ function loadFromJSON(data) {
                 drawLineBetweenLabels(label1, label2, lineData.color, lineData.width, lineData.hidden);
             }
         });
+    }
+
+    if (data.properties) {
+        console.log('data.properties');
+        bodyBackgroundColor = data.properties.bodyBackgroundColor;
+        document.body.style.backgroundColor = bodyBackgroundColor;
     }
 }
 
