@@ -23,6 +23,8 @@ let lineCanvas = document.getElementById('lineCanvas');
 let ctx = lineCanvas.getContext('2d');
 let lines = []; // Store drawn lines between labels
 
+let hideLineMode = false;
+
 let tmp = null;
 
 // Buttons
@@ -182,6 +184,13 @@ document.addEventListener('keydown', function(e) {
                 }
             })
             fileInput.click();
+        }
+
+        // Hide line mode
+        if (e.key === 'h') {
+            e.preventDefault();
+            hideLineMode = !hideLineMode;
+            redrawLines();
         }
     }
 });
@@ -993,8 +1002,12 @@ function redrawLines() {
     ctx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
 
     // Redraw each line
-    lines.forEach(line =>redrawLine(line));
+    if(!hideLineMode){
+        lines.forEach(line =>redrawLine(line));
+    }
 }
+
+
 
 
 
