@@ -140,6 +140,7 @@ document.addEventListener('keydown', function(e) {
             fileInput.click();
         }
 
+        // Add new from json
         if (e.key === 'p') {
             e.preventDefault();
             const inputJSON = prompt("Enter the JSON data to ADD labels and lines:");
@@ -151,6 +152,36 @@ document.addEventListener('keydown', function(e) {
                     alert("Invalid JSON format. Please try again.");
                 }
             }
+        }
+
+        // Add new from file
+        if (e.key === 'q') {
+            e.preventDefault();
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+
+            fileInput.addEventListener('change', () => {
+                if(fileInput.files.length === 0) {
+                    alert('No file selected');
+                }
+                else {
+                    const file = fileInput.files[0];
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const inputJSON = event.target.result;
+                        if(inputJSON) {
+                            try {
+                                const parsedData = JSON.parse(inputJSON);
+                                addNewFromJSON(parsedData);
+                            } catch (error) {
+                                alert("Invalid JSON format. Please try again.")
+                            }
+                        }
+                    }
+                    reader.readAsText(file);
+                }
+            })
+            fileInput.click();
         }
     }
 });
