@@ -1316,9 +1316,7 @@ function correctJSON(json){
     // Remove lines to itself
     if (json.lines) {
         json.lines.forEach(lineData => {
-            const label1 = findLabelByText(lineData.from);
-            const label2 = findLabelByText(lineData.to);
-            if (label1 === label2) {
+            if (lineData.from === lineData.to) {
                 let index = lines.findIndex(e => e === lineData);
                 json.lines.splice(index, 1);
             }
