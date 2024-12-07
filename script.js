@@ -214,6 +214,7 @@ document.addEventListener('keyup', function(e) {
 
 // Selecting Line 
 document.addEventListener('click', function(e) {
+    console.log("line");
     const clickX = e.clientX;
     const clickY = e.clientY; 
 
@@ -231,17 +232,41 @@ document.addEventListener('click', function(e) {
 
 // Deselect Label (so selecting body)
 document.addEventListener('click', function(e) {
-    if (!e.target.classList.contains('floating-label')) {
-        if(selectedLabel){
-            selectedLabel.classList.remove('selected');
-            selectedLabel = null;
+    console.log("deselect label");
+
+    for(i=0;i<labelPositions.length;i++){
+        const rect = labelPositions[i].element.getBoundingClientRect();
+
+        const isInside = e.clientX >= rect.left && e.clientX <= rect.right &&
+                         e.clientY >= rect.top && e.clientY <= rect.bottom;
+
+        
+
+        if (isInside){
+            console.log("isInside");
+            return;
         }
-        updateColorPickerFromBody();
     }
+    console.log('no floating label');
+    if(selectedLabel) {
+        selectedLabel.classList.remove('selected');
+        selectedLabel = null;
+    }
+    updateColorPickerFromBody;
+
+    // if (!e.target.classList.contains('floating-label')) {
+    //     console.log("no floating label");
+    //     if(selectedLabel){
+    //         selectedLabel.classList.remove('selected');
+    //         selectedLabel = null;
+    //     }
+    //     updateColorPickerFromBody();
+    // }
 })
 
 // Double-click to create a new label
 document.addEventListener('dblclick', function(e) {
+    console.log('dblclick');
 
     const clickX = e.clientX;
     const clickY = e.clientY;
@@ -630,6 +655,7 @@ function updateColorPickerFromLine(line){
 
 // Function to update color picker based on body background color
 function updateColorPickerFromBody(){
+    console.log("colorFromBody");
     const colorPicker = document.getElementById('colorPicker'); 
     
     const currentColor = document.body.style.backgroundColor; // Color of label
@@ -754,6 +780,7 @@ function makeLabelDraggableAndEditable(label) {
 
     // Handle Shift+Click for line drawing
     label.addEventListener('click', function(e) {
+        console.log('label clicked');
         if (isShiftPressed) {
             if (!firstLabel) {
                 firstLabel = label; // Set the first label
