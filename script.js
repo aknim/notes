@@ -133,6 +133,7 @@ document.addEventListener('keydown', function(e) {
                                 const parsedData = JSON.parse(inputJSON);
                                 loadFromJSON(parsedData);
                             } catch (error) {
+                                console.log(error);
                                 alert("Invalid JSON format. Please try again.");
                             }
                         }
@@ -502,6 +503,7 @@ function saveCurrAndNextLabelsAndLines(label){
 }
 
 function addNewFromJSON(data){
+    data = correctJSON(data);
     let itemLabels = [];
     let itemLines = [];
     let action = {
@@ -693,10 +695,12 @@ function collectLinkedLabelsAndLines(label){
     while(startingLabels.length !==0 ){
         currLabel = startingLabels.shift();
         linkedLabelsList.push(currLabel);
+        
         lines.forEach(line => {
             if(line.label1 === currLabel){
                 startingLabels.push(line.label2);
                 linesList.push(line);
+                console.log("length after pushing: "+linesList.length);
             }
         })
     }
@@ -785,6 +789,10 @@ function makeLabelDraggableAndEditable(label) {
             if (!firstLabel) {
                 firstLabel = label; // Set the first label
             } else {
+                if(firstLabel===label){
+                    console.log('firstLabel===label');
+                    return;
+                }
                 let item =  drawLineBetweenLabels(firstLabel, label); // Draw a line between first and second labels
                 firstLabel = null; // Reset the first label
                 let action = {
@@ -936,6 +944,7 @@ function flipLineDirection(){
 
 // Function to draw a line between two labels
 function drawLineBetweenLabels(label1, label2, lineColor, lineWidth, lineHidden = false) {
+    
     const rect1 = label1.getBoundingClientRect();
     const rect2 = label2.getBoundingClientRect();
 
@@ -1102,11 +1111,12 @@ function getState(){
         bodyBackgroundColor: bodyBackgroundColor
     };
 
-    const state = {
+    state = {
         labels: labelsData,
         lines: linesData,
         properties: propertiesData
     };
+    state = correctJSON(state);
     return state;
 }
 
@@ -1246,6 +1256,7 @@ function saveState() {
 
 // Function to load labels and lines from provided JSON
 function loadFromJSON(data) {
+    data = correctJSON(data);
     // Clear existing labels and lines
     clearAllLabelsAndLines();
     tmp = data;
@@ -1297,6 +1308,25 @@ function loadFromJSON(data) {
         bodyBackgroundColor = data.properties.bodyBackgroundColor;
         document.body.style.backgroundColor = bodyBackgroundColor;
     }
+}
+
+function correctJSON(json){
+    console.log("Before correction: ");
+    console.log(json);
+    // Remove lines to itself
+    if (json.lines) {
+        json.lines.forEach(lineData => {
+            const label1 = findLabelByText(lineData.from);
+            const label2 = findLabelByText(lineData.to);
+            if (label1 === label2) {
+                let index = lines.findIndex(e => e === lineData);
+                json.lines.splice(index, 1);
+            }
+        });
+    }
+    console.log("After correction: ");
+    console.log(json);
+    return json;
 }
 
 // Function to clear all existing labels and lines
