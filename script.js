@@ -310,10 +310,16 @@ document.addEventListener('dblclick', function(e) {
     undoStack.push(action);
 });
 
+
 document.addEventListener('keydown', function(e) {
     // Check if it's Cmd + Shift + 'c' 
     if (e.shiftKey && e.key.toLowerCase() === 'c') {
         if (selectedLabel) {
+            const activeElement = document.activeElement;
+            if (activeElement && (activeElement.tagName === "INPUT" || 
+                activeElement.tagName === "TEXTAREA" || activeElement.isContentEditable)) {
+                    return;
+            }
             toggleCollapse(selectedLabel); // Collapse the selected label
         }
     } 
