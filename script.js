@@ -154,6 +154,7 @@ document.addEventListener('keydown', function(e) {
                     const parsedData = JSON.parse(inputJSON);
                     addNewFromJSON(parsedData);
                 } catch (error) {
+                    console.log(error);
                     alert("Invalid JSON format. Please try again.");
                 }
             }
@@ -515,12 +516,18 @@ function addNewFromJSON(data){
     let action = {
         type: "new from JSON"
     };
+
+    let maxX = 0;
+    for(let i=0;i<labelPositions.length;i++) {
+        const rect = labelPositions[i].element.getBoundingClientRect();
+        maxX = Math.max(parseFloat(rect.right), maxX);
+    }
     if (data.labels) {
         data.labels.forEach(labelData => {
             newLabel = document.createElement('div');
             newLabel.classList.add('floating-label');
             newLabel.innerHTML = labelData.html?labelData.html:labelData.text;
-            newLabel.style.left = `${labelData.left}px`;
+            newLabel.style.left = `${labelData.left + maxX}px`;
             newLabel.style.top = `${labelData.top}px`;
             newLabel.style.color = labelData.color;
             newLabel.style.borderColor = labelData.color;
