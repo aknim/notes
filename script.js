@@ -511,6 +511,7 @@ function saveCurrAndNextLabelsAndLines(label){
 
 function addNewFromJSON(data){
     data = correctJSON(data);
+    tmp = data;
     let itemLabels = [];
     let itemLines = [];
     let action = {
@@ -522,6 +523,7 @@ function addNewFromJSON(data){
         const rect = labelPositions[i].element.getBoundingClientRect();
         maxX = Math.max(parseFloat(rect.right), maxX);
     }
+    let tmpLength = labelPositions.length;
     if (data.labels) {
         data.labels.forEach(labelData => {
             newLabel = document.createElement('div');
@@ -534,6 +536,7 @@ function addNewFromJSON(data){
             newLabel.style.visibility = labelData.visibility?labelData.visibility:"visible";
             newLabel.style.backgroundColor = labelData.backgroundColor;
             newLabel.wasTitle = labelData.wasTitle; // maybe also add labelData.title so that can load even from saveState not just saveCollectedLabels
+            newLabel.loadId = ''+(tmpLength+Number(labelData.id));//''+tmpLength+Number(labelData.id); // LabelPositions.length + labelData.id
 
             document.body.appendChild(newLabel);
             let item = {
@@ -552,8 +555,8 @@ function addNewFromJSON(data){
 
     if (data.lines) {
         data.lines.forEach(lineData => {
-            const label1 = findLabelByText(lineData.from);
-            const label2 = findLabelByText(lineData.to);
+            const label1 = findLabelByLoadId(''+lineData.from, tmpLength); //findLabelByText(lineData.from);
+            const label2 = findLabelByLoadId(''+lineData.to, tmpLength); //findLabelByText(lineData.to);
             if (label1 && label2) {
                 let item = drawLineBetweenLabels(label1, label2, lineData.color, lineData.width, lineData.hidden);
                 itemLines.push(item);
@@ -871,6 +874,15 @@ function findLabelByText(text) {
     return labelPositions.find(labelPos => labelPos.element.textContent.trim() === text)?.element;
 }
 
+// Function to find a label by its id
+function findLabelByLoadId(id, tmpLength=0) {
+    let labelById = labelPositions.find(labelPos => labelPos.element.loadId === (''+(Number(id)+tmpLength)))?.element;
+    if (labelById) return labelById;
+
+    // Making backward compatible
+    else return findLabelByText(id);
+}
+
 // #region DELETE FUNCTIONS 
 
 // Function to delete selected label or line
@@ -1092,7 +1104,9 @@ function redrawLines() {
 // #region SAVE & LOAD 
 
 function getState(){
-    const labelsData = labelPositions.map(labelPos => ({
+    const labelsData = labelPositions.map((labelPos, index) => {
+        labelPos.element.id = index;
+        return {
         //text: labelPos.element.textContent.trim(),  // Get only the innerText (label content)
         html: labelPos.element.innerHTML.trim(),
         left: getValFromPx(labelPos.element.style.left),                      // Get the x (left) position of the label
@@ -1101,12 +1115,14 @@ function getState(){
         collpased: labelPos.element.collapsed,
         visibility: labelPos.element.style.visibility,
         backgroundColor: labelPos.element.style.backgroundColor,
-        title: labelPos.element.title=="true"?true:false
-    }));
+        title: labelPos.element.title=="true"?true:false,
+        id: ''+index,
+    };
+}); 
 
     const linesData = lines.map(line => ({
-        from: line.label1.textContent.trim(),       // Get the text of the first label connected by the line
-        to: line.label2.textContent.trim(),         // Get the text of the second label connected by the line
+        from: line.label1.id, //textContent.trim(),       // Get the text of the first label connected by the line
+        to: line.label2.id, //textContent.trim(),         // Get the text of the second label connected by the line
         fromPosition: {                           // The starting position of the line
             x: line.x1,
             y: line.y1
@@ -1288,6 +1304,7 @@ function loadFromJSON(data) {
             newLabel.style.visibility = labelData.visibility?labelData.visibility:'visible';
             newLabel.style.backgroundColor = labelData.backgroundColor;
             newLabel.title = labelData.title;
+            newLabel.loadId = ''+labelData.id;
 
             
             document.body.appendChild(newLabel);
@@ -1308,8 +1325,8 @@ function loadFromJSON(data) {
     // Load lines
     if (data.lines) {
         data.lines.forEach(lineData => {
-            const label1 = findLabelByText(lineData.from);
-            const label2 = findLabelByText(lineData.to);
+            const label1 = findLabelByLoadId(''+lineData.from); //findLabelByText(lineData.from);
+            const label2 = findLabelByLoadId(''+lineData.to); //findLabelByText(lineData.to);
             if (label1 && label2) {
                 drawLineBetweenLabels(label1, label2, lineData.color, lineData.width, lineData.hidden);
             }
