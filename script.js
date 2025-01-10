@@ -125,6 +125,7 @@ document.addEventListener('keydown', function(e) {
                 }
                 else{
                     const file = fileInput.files[0];
+                    document.title = file.name;
                     const reader = new FileReader();
                     reader.onload = function(event) {
                         const inputJSON = event.target.result;
