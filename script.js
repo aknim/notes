@@ -754,8 +754,9 @@ function makeLabelDraggableAndEditable(label) {
             const newLeft = mouseX - offsetX;
             const newTop = mouseY - offsetY;
 
+            // Commented To Allow Overlapping
             // Prevent overlapping
-            if (!isOverlapping(label, newLeft, newTop)) {
+            // if (!isOverlapping(label, newLeft, newTop)) {
                 if(label.collapsed){
                     const linkedLabelsList = collectLinkedLabelsAndLines(label).linkedLabelsList;
                     diffX = newLeft - getValFromPx(label.style.left);
@@ -767,7 +768,7 @@ function makeLabelDraggableAndEditable(label) {
                     label.style.top = `${newTop}px`;
                 }
                redrawLines(); // Update lines when label is dragged
-            }
+            // }
         }
     });
 
